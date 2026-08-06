@@ -442,35 +442,63 @@ app.get('/api/usuarios', autenticarUsuario, verificarPermiso('USUARIOS_ABM'), as
 });
 
 app.post('/api/usuarios', autenticarUsuario, verificarPermiso('USUARIOS_ABM'), async (req, res) => {
-  const { email, password, nombre, rol } = req.body;
-
   try {
+    const { email, password, nombre, rol } = req.body;
+
+    // 1. Validaciones básicas de campos
     if (!email || !password || !nombre || !rol) {
       return res.status(400).json({ ok: false, error: 'Todos los campos son obligatorios.' });
     }
 
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    if (password.length < 6) {
+      return res.status(400).json({ ok: false, error: 'La contraseña debe tener al menos 6 caracteres.' });
+    }
+
+    // 2. Crear usuario en Supabase Auth, pasando nombre y rol como metadata.
+    // El trigger "on_auth_user_created" (handle_new_user) toma estos valores
+    // y crea la fila en public.perfiles automáticamente. Por eso ya NO hacemos
+    // un insert manual aparte: evita el error de "duplicate key" (clave primaria
+    // duplicada) contra la fila que el trigger ya insertó.
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true
+      email_confirm: true,
+      user_metadata: { nombre, rol }
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      console.error('Error en Supabase Auth:', authError);
+      return res.status(400).json({
+        ok: false,
+        error: authError.message || 'Error al crear la cuenta en Auth.'
+      });
+    }
 
-    const { data: perfilData, error: perfilError } = await supabase
+    // 3. Leer el perfil que el trigger acaba de crear, para devolverlo en la respuesta
+    const { data: perfil, error: perfilError } = await supabase
       .from('perfiles')
-      .insert([{ id: authData.user.id, nombre, rol }])
-      .select()
+      .select('*')
+      .eq('id', authUser.user.id)
       .single();
 
     if (perfilError) {
-      await supabase.auth.admin.deleteUser(authData.user.id);
-      throw perfilError;
+      console.error('Error leyendo el perfil recién creado:', perfilError);
+      // El usuario de Auth y su perfil ya existen en este punto (el trigger corrió bien),
+      // así que no hay que revertir nada: solo avisamos que no pudimos confirmar la lectura.
+      return res.status(500).json({
+        ok: false,
+        error: 'El usuario se creó, pero no se pudo confirmar su perfil. Refrescá la lista.'
+      });
     }
 
-    return res.json({ ok: true, mensaje: 'Usuario creado exitosamente', data: perfilData });
+    return res.json({ ok: true, data: perfil });
   } catch (error) {
-    return res.status(500).json({ ok: false, error: error.message });
+    console.error('Error inesperado al crear usuario:', error);
+    const mensaje = typeof error === 'string'
+      ? error
+      : (error?.message || 'Error inesperado al crear usuario.');
+
+    return res.status(500).json({ ok: false, error: mensaje });
   }
 });
 

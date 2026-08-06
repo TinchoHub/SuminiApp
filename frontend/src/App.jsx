@@ -63,8 +63,21 @@ const cargarPerfilYPermisos = async (userId) => {
       .eq('id', userId)
       .maybeSingle();
 
-    const rolActual = perfil?.rol || 'ADMIN';
-    setUserPerfil(perfil || { nombre: 'Administrador', rol: rolActual });
+    if (perfilError) {
+      console.warn('Error leyendo el perfil del usuario:', perfilError.message);
+    }
+
+    if (!perfil) {
+      // Si no se pudo leer el perfil, no asumimos ADMIN ni ningún otro rol:
+      // dejamos al usuario sin permisos y avisamos, en vez de darle acceso por error.
+      setUserPerfil(null);
+      setPermisos([]);
+      setError('No se pudo cargar tu perfil de usuario. Recargá la página o contactá a un administrador.');
+      return;
+    }
+
+    setUserPerfil(perfil);
+    const rolActual = perfil.rol;
 
     // 2. Si es ADMIN, asignamos acceso total sin necesidad de consultar la DB
     if (rolActual.toUpperCase() === 'ADMIN') {
