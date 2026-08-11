@@ -1,6 +1,10 @@
 // frontend/src/pages/AgendarTurno.jsx
 import React, { useEffect, useState } from 'react';
-import { validarTokenProveedor, agendarTurnoProveedor } from '../services/api';
+import { 
+  validarTokenProveedor, 
+  agendarTurnoProveedor, 
+  getConfiguracionDisponibilidadPublica 
+} from '../services/api';
 
 export default function AgendarTurno() {
   // Extraer token y oc de la URL (Ej: /agendar/token123?oc=UUID)
@@ -14,17 +18,25 @@ export default function AgendarTurno() {
   const [proveedor, setProveedor] = useState(null);
   const [oc, setOc] = useState(null);
 
+  // Configuración de disponibilidad cargada desde el backend
+  const [configDisponibilidad, setConfigDisponibilidad] = useState([]);
+  const [opcionesHoras, setOpcionesHoras] = useState([
+    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'
+  ]);
+
   // Formulario
   const [fechaTurno, setFechaTurno] = useState('');
   const [horaInicio, setHoraInicio] = useState('08:00');
   const [patenteVehiculo, setPatenteVehiculo] = useState('');
   const [datosChofer, setDatosChofer] = useState('');
+  const [advertenciaFecha, setAdvertenciaFecha] = useState(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [confirmado, setConfirmado] = useState(false);
 
+  // Cargar datos de la OC y la configuración de horarios permitidos
   useEffect(() => {
-    async function validarEnlace() {
+    async function inicializar() {
       if (!token || !ocId) {
         setError('El enlace de agendamiento es incompleto o inválido.');
         setLoading(false);
@@ -34,14 +46,29 @@ export default function AgendarTurno() {
       try {
         setLoading(true);
         setError(null);
-        const res = await validarTokenProveedor(token, ocId);
 
-        if (res.ok) {
-          setProveedor(res.proveedor);
-          setOc(res.oc);
+        // 1. Validar la OC con el token
+        const resVal = await validarTokenProveedor(token, ocId);
+
+        if (resVal.ok) {
+          setProveedor(resVal.proveedor);
+          setOc(resVal.oc);
         } else {
-          setError(res.error || 'No se pudo validar el acceso.');
+          setError(resVal.error || 'No se pudo validar el acceso.');
+          setLoading(false);
+          return;
         }
+
+        // 2. Cargar la configuración de cupos y horarios públicos
+        try {
+          const resConfig = await getConfiguracionDisponibilidadPublica();
+          if (resConfig.ok && Array.isArray(resConfig.data)) {
+            setConfigDisponibilidad(resConfig.data);
+          }
+        } catch (errConfig) {
+          console.warn('No se pudo cargar la configuración de horarios, se usarán rangos por defecto.');
+        }
+
       } catch (err) {
         setError(err.response?.data?.error || 'El enlace ha expirado o no es válido.');
       } finally {
@@ -49,13 +76,70 @@ export default function AgendarTurno() {
       }
     }
 
-    validarEnlace();
+    inicializar();
   }, [token, ocId]);
+
+  // Validar si el día seleccionado está activo y calcular los horarios permitidos
+  const handleFechaChange = (e) => {
+  const selectedDate = e.target.value;
+  setAdvertenciaFecha(null);
+
+  if (!selectedDate) {
+    setFechaTurno('');
+    return;
+  }
+
+  // 1. Validar fecha límite de entrega de la OC
+  if (oc?.fecha_limite_entrega && selectedDate > oc.fecha_limite_entrega) {
+    setAdvertenciaFecha(`⚠️ La fecha seleccionada supera la Fecha Límite de Entrega (${oc.fecha_limite_entrega}).`);
+    setFechaTurno('');
+    return;
+  }
+
+  // 2. Obtener el número de día de la semana (0 = Domingo, 1 = Lunes, ..., 6 = Sábado)
+  const fechaObj = new Date(`${selectedDate}T00:00:00Z`);
+  const numDiaSemana = fechaObj.getUTCDay();
+  const NOMBRES_DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+  // 3. Buscar en la configuración por dia_semana (número)
+  if (configDisponibilidad.length > 0) {
+    const configDia = configDisponibilidad.find(
+      (c) => Number(c.dia_semana) === numDiaSemana
+    );
+
+    // Si no existe o está inactivo (activo === false)
+    if (!configDia || !configDia.activo) {
+      setAdvertenciaFecha(`⚠️ Los días ${NOMBRES_DIAS[numDiaSemana]} no están habilitados para recepción de mercadería.`);
+      setFechaTurno('');
+      return;
+    }
+
+    // 4. Generar la lista de horarios disponibles según el rango configurado para ese día
+    if (configDia.hora_inicio && configDia.hora_fin) {
+      const startH = parseInt(configDia.hora_inicio.split(':')[0], 10) || 8;
+      const endH = parseInt(configDia.hora_fin.split(':')[0], 10) || 17;
+
+      const horasGeneradas = [];
+      for (let h = startH; h < endH; h++) {
+        horasGeneradas.push(h < 10 ? `0${h}:00` : `${h}:00`);
+      }
+
+      if (horasGeneradas.length > 0) {
+        setOpcionesHoras(horasGeneradas);
+        setHoraInicio(horasGeneradas[0]);
+      }
+    }
+  }
+
+  setFechaTurno(selectedDate);
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setAdvertenciaFecha(null);
+
     if (!fechaTurno || !horaInicio || !patenteVehiculo) {
-      alert('Por favor, completa los campos requeridos (*).');
+      alert('Por favor, completa todos los campos requeridos (*).');
       return;
     }
 
@@ -65,8 +149,8 @@ export default function AgendarTurno() {
         orden_compra_id: oc.id,
         fecha_turno: fechaTurno,
         hora_inicio: horaInicio,
-        patente_vehiculo: patenteVehiculo.toUpperCase(),
-        datos_chofer: datosChofer
+        patente_vehiculo: patenteVehiculo.toUpperCase().trim(),
+        datos_chofer: datosChofer.trim()
       };
 
       const res = await agendarTurnoProveedor(payload);
@@ -76,7 +160,8 @@ export default function AgendarTurno() {
         alert(res.error || 'Ocurrió un error al agendar el turno.');
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Error de conexión con el servidor.');
+      const msgErr = err.response?.data?.error || 'Error de conexión con el servidor.';
+      alert(msgErr);
     } finally {
       setSubmitting(false);
     }
@@ -146,7 +231,9 @@ export default function AgendarTurno() {
         <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '14px', marginBottom: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span style={{ fontWeight: '700', color: '#1e40af', fontSize: '15px' }}>OC: {oc?.numero_oc}</span>
-            <span style={{ fontSize: '13px', color: '#dc2626', fontWeight: '600' }}>⏰ Entrega Límite: {oc?.fecha_limite_entrega}</span>
+            <span style={{ fontSize: '13px', color: '#dc2626', fontWeight: '600' }}>
+              ⏰ Entrega Límite: {oc?.fecha_limite_entrega || 'No especificada'}
+            </span>
           </div>
 
           <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#1e3a8a' }}><strong>Detalle de Insumos Solicitados:</strong></p>
@@ -159,6 +246,13 @@ export default function AgendarTurno() {
           </ul>
         </div>
 
+        {/* Mensaje de advertencia si elige una fecha no permitida */}
+        {advertenciaFecha && (
+          <div style={{ padding: '12px 14px', backgroundColor: '#fef3c7', color: '#92400e', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', fontWeight: '600' }}>
+            {advertenciaFecha}
+          </div>
+        )}
+
         {/* Formulario de Agendamiento */}
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
@@ -167,8 +261,9 @@ export default function AgendarTurno() {
               <input
                 type="date"
                 min={hoyStr}
+                max={oc?.fecha_limite_entrega || undefined}
                 value={fechaTurno}
-                onChange={(e) => setFechaTurno(e.target.value)}
+                onChange={handleFechaChange}
                 required
                 style={inputStyle}
               />
@@ -181,16 +276,13 @@ export default function AgendarTurno() {
                 onChange={(e) => setHoraInicio(e.target.value)}
                 required
                 style={inputStyle}
+                disabled={!fechaTurno}
               >
-                <option value="08:00">08:00 hs</option>
-                <option value="09:00">09:00 hs</option>
-                <option value="10:00">10:00 hs</option>
-                <option value="11:00">11:00 hs</option>
-                <option value="12:00">12:00 hs</option>
-                <option value="13:00">13:00 hs</option>
-                <option value="14:00">14:00 hs</option>
-                <option value="15:00">15:00 hs</option>
-                <option value="16:00">16:00 hs</option>
+                {opcionesHoras.map((hora) => (
+                  <option key={hora} value={hora}>
+                    {hora} hs
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -218,7 +310,7 @@ export default function AgendarTurno() {
             />
           </div>
 
-          <button type="submit" disabled={submitting} style={buttonStyle}>
+          <button type="submit" disabled={submitting || !fechaTurno} style={buttonStyle}>
             {submitting ? 'Reservando turno...' : '📅 Confirmar y Agendar Turno'}
           </button>
         </form>

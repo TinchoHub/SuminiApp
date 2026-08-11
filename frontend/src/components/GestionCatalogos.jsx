@@ -6,7 +6,8 @@ import {
   updateProveedor,
   getProductos,
   createProducto,
-  updateProducto
+  updateProducto,
+  getProductosPorProveedor
 } from '../services/api';
 
 export function GestionCatalogos() {
@@ -21,8 +22,10 @@ export function GestionCatalogos() {
   // Estados Formulario Proveedor
   const [editingProv, setEditingProv] = useState(null);
   const [provNombre, setProvNombre] = useState('');
+  const [provCuit, setProvCuit] = useState(''); // 👈 CUIT integrado
   const [provEmail, setProvEmail] = useState('');
   const [provTelefono, setProvTelefono] = useState('');
+  const [provProductos, setProvProductos] = useState([]); // Array de IDs de productos seleccionados
 
   // Estados Formulario Producto
   const [editingProd, setEditingProd] = useState(null);
@@ -49,24 +52,57 @@ export function GestionCatalogos() {
   }, []);
 
   // Handlers Proveedores
-  const handleEditProvClick = (p) => {
+  const handleEditProvClick = async (p) => {
     setEditingProv(p);
-    setProvNombre(p.nombre || '');
-    setProvEmail(p.email_contacto || '');
+    setProvNombre(p.nombre || p.razon_social || '');
+    setProvCuit(p.cuit || ''); // 👈 Carga el CUIT al editar
+    setProvEmail(p.email_contacto || p.email || '');
     setProvTelefono(p.telefono || '');
+
+    // Cargar los productos que ya tiene asignados este proveedor
+    try {
+      const res = await getProductosPorProveedor(p.id);
+      if (res.ok && Array.isArray(res.data)) {
+        setProvProductos(res.data.map(prod => prod.id));
+      } else {
+        setProvProductos([]);
+      }
+    } catch (err) {
+      console.error('Error al obtener productos del proveedor:', err);
+      setProvProductos([]);
+    }
   };
 
   const handleResetProvForm = () => {
     setEditingProv(null);
     setProvNombre('');
+    setProvCuit(''); // 👈 Limpia el CUIT al resetear
     setProvEmail('');
     setProvTelefono('');
+    setProvProductos([]);
+  };
+
+  const handleToggleProdSelection = (prodId) => {
+    setProvProductos(prev =>
+      prev.includes(prodId)
+        ? prev.filter(id => id !== prodId)
+        : [...prev, prodId]
+    );
   };
 
   const handleSaveProveedor = async (e) => {
     e.preventDefault();
     try {
-      const payload = { nombre: provNombre, email_contacto: provEmail, telefono: provTelefono };
+      const payload = {
+        nombre: provNombre,
+        razon_social: provNombre,
+        cuit: provCuit, // 👈 Enviado en el payload
+        email_contacto: provEmail,
+        email: provEmail,
+        telefono: provTelefono,
+        producto_ids: provProductos // Array de UUIDs seleccionados
+      };
+
       if (editingProv) {
         await updateProveedor(editingProv.id, payload);
       } else {
@@ -155,6 +191,7 @@ export function GestionCatalogos() {
             <h3 style={{ marginTop: 0, color: '#111827' }}>
               {editingProv ? '✏️ Editar Proveedor' : '➕ Nuevo Proveedor'}
             </h3>
+            
             <div style={fieldStyle}>
               <label style={labelStyle}>Nombre / Razón Social *</label>
               <input
@@ -166,6 +203,18 @@ export function GestionCatalogos() {
                 placeholder="Ej: AgroRiego Argentina S.A."
               />
             </div>
+
+            <div style={fieldStyle}>
+              <label style={labelStyle}>CUIT / Identificación Fiscal</label>
+              <input
+                type="text"
+                value={provCuit}
+                onChange={(e) => setProvCuit(e.target.value)}
+                style={inputStyle}
+                placeholder="Ej: 30-12345678-9"
+              />
+            </div>
+
             <div style={fieldStyle}>
               <label style={labelStyle}>Email de Contacto *</label>
               <input
@@ -177,6 +226,7 @@ export function GestionCatalogos() {
                 placeholder="contacto@agroriego.com"
               />
             </div>
+
             <div style={fieldStyle}>
               <label style={labelStyle}>Teléfono</label>
               <input
@@ -187,6 +237,28 @@ export function GestionCatalogos() {
                 placeholder="+54 11 1234-5678"
               />
             </div>
+
+            {/* Selector de Insumos/Productos que provee */}
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Productos / Insumos que Provee</label>
+              <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #d1d5db', borderRadius: '6px', padding: '8px', backgroundColor: '#f9fafb' }}>
+                {productos.length === 0 ? (
+                  <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>No hay productos cargados en el catálogo.</p>
+                ) : (
+                  productos.map(prod => (
+                    <label key={prod.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', marginBottom: '6px', cursor: 'pointer', color: '#374151' }}>
+                      <input
+                        type="checkbox"
+                        checked={provProductos.includes(prod.id)}
+                        onChange={() => handleToggleProdSelection(prod.id)}
+                      />
+                      <span><strong style={{ color: '#2563eb' }}>{prod.sku}</strong> - {prod.descripcion}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+
             <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
               <button type="submit" style={btnPrimaryStyle}>
                 {editingProv ? 'Guardar Cambios' : 'Crear Proveedor'}
@@ -205,6 +277,7 @@ export function GestionCatalogos() {
               <thead>
                 <tr style={thRowStyle}>
                   <th style={{ padding: '10px' }}>Nombre</th>
+                  <th style={{ padding: '10px' }}>CUIT</th>
                   <th style={{ padding: '10px' }}>Email</th>
                   <th style={{ padding: '10px' }}>Teléfono</th>
                   <th style={{ padding: '10px', textAlign: 'center' }}>Acción</th>
@@ -213,8 +286,9 @@ export function GestionCatalogos() {
               <tbody>
                 {proveedores.map((p) => (
                   <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: '10px', fontWeight: '600' }}>{p.nombre}</td>
-                    <td style={{ padding: '10px', color: '#4b5563' }}>{p.email_contacto}</td>
+                    <td style={{ padding: '10px', fontWeight: '600' }}>{p.nombre || p.razon_social}</td>
+                    <td style={{ padding: '10px', color: '#4b5563' }}>{p.cuit || '-'}</td>
+                    <td style={{ padding: '10px', color: '#4b5563' }}>{p.email_contacto || p.email}</td>
                     <td style={{ padding: '10px', color: '#4b5563' }}>{p.telefono || '-'}</td>
                     <td style={{ padding: '10px', textAlign: 'center' }}>
                       <button onClick={() => handleEditProvClick(p)} style={btnSmallStyle}>✏️</button>

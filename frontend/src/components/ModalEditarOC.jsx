@@ -1,6 +1,6 @@
 // frontend/src/components/ModalEditarOC.jsx
 import React, { useEffect, useState } from 'react';
-import { getProductos, updateOrdenCompra } from '../services/api';
+import { getProductosPorProveedor, updateOrdenCompra, deleteOrdenCompra } from '../services/api';
 import { EstadoBadge } from './EstadoBadge';
 import { BuscadorProducto } from './BuscadorProducto';
 
@@ -16,6 +16,7 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
   const [items, setItems] = useState([]);
 
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -23,12 +24,25 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
       setLoadingCat(true);
       setError(null);
 
-      getProductos()
-        .then((res) => {
-          if (res.ok) setProductosCat(res.data);
-        })
-        .catch(() => setError('No se pudo cargar el catálogo.'))
-        .finally(() => setLoadingCat(false));
+      // Obtener el ID del proveedor de la OC
+      const provId = oc.proveedor_id || oc.proveedores?.id;
+
+      if (provId) {
+        // Cargar ÚNICAMENTE los productos que comercializa este proveedor
+        getProductosPorProveedor(provId)
+          .then((res) => {
+            if (res.ok && Array.isArray(res.data)) {
+              setProductosCat(res.data);
+            } else {
+              setProductosCat([]);
+            }
+          })
+          .catch(() => setError('No se pudieron cargar los productos del proveedor.'))
+          .finally(() => setLoadingCat(false));
+      } else {
+        setProductosCat([]);
+        setLoadingCat(false);
+      }
 
       // Extraer fecha_emision si existe, o usar hoy por defecto
       const fEmisionOC = oc.fecha_emision || (oc.created_at ? oc.created_at.split('T')[0] : hoyStr);
@@ -93,6 +107,32 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
     });
   };
 
+  // Handler para eliminar la Orden de Compra con confirmación
+  const handleDeleteOC = async () => {
+    const confirmacion = window.confirm(
+      `¿Estás seguro de que deseas eliminar la Orden de Compra ${oc.numero_oc || ''}? Esta acción no se puede deshacer.`
+    );
+
+    if (!confirmacion) return;
+
+    try {
+      setDeleting(true);
+      setError(null);
+      const res = await deleteOrdenCompra(oc.id);
+
+      if (res.ok) {
+        onOCUpdated();
+        onClose();
+      } else {
+        setError(res.error || 'Ocurrió un error al eliminar la OC.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error al conectar con el servidor.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -115,7 +155,7 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
     for (const item of items) {
       if (Number(item.cantidad_solicitada) < Number(item.cantidad_recibida)) {
         setError(
-          `La cantidad solicitada para ${item.sku} no puede ser menor a lo recibido (${item.cantidad_recibida}).`
+          `La cantidad solicitada para ${item.sku || 'el producto'} no puede ser menor a lo recibido (${item.cantidad_recibida}).`
         );
         return;
       }
@@ -159,7 +199,7 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
               <EstadoBadge estado={oc.estado} />
             </div>
             <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '13px' }}>
-              Proveedor: <strong>{oc.proveedores?.nombre || 'N/A'}</strong>
+              Proveedor: <strong>{oc.proveedores?.nombre || oc.proveedores?.razon_social || 'N/A'}</strong>
             </p>
           </div>
           <button onClick={onClose} style={closeButtonStyle}>✕</button>
@@ -168,7 +208,7 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
         {error && <div style={errorStyle}>{error}</div>}
 
         {loadingCat ? (
-          <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>Cargando catálogo...</p>
+          <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>Cargando productos del proveedor...</p>
         ) : (
           <form onSubmit={handleSubmit}>
             <div style={rowStyle}>
@@ -209,80 +249,113 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <h3 style={{ margin: 0, fontSize: '15px', color: '#374151' }}>📦 Detalle de Insumos / Productos</h3>
-              <button type="button" onClick={handleAddItem} style={buttonAddStyle}>
+              <button
+                type="button"
+                onClick={handleAddItem}
+                disabled={productosCat.length === 0}
+                style={buttonAddStyle}
+              >
                 ➕ Agregar Producto
               </button>
             </div>
 
-            <div style={{ marginBottom: '20px', maxHeight: '250px', overflowY: 'visible' }}>
-              {items.map((item, index) => {
-                const yaRecibido = Number(item.cantidad_recibida || 0);
+            {productosCat.length === 0 ? (
+              <div style={warningBoxStyle}>
+                ⚠️ Este proveedor no tiene productos vinculados en el catálogo.
+              </div>
+            ) : (
+              <div style={{ marginBottom: '20px', maxHeight: '250px', overflowY: 'visible' }}>
+                {items.map((item, index) => {
+                  const yaRecibido = Number(item.cantidad_recibida || 0);
 
-                return (
-                  <div key={index} style={itemRowStyle}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ ...labelStyle, fontSize: '12px' }}>Buscar SKU / Insumo</label>
-                      <BuscadorProducto
-                        productos={productosCat}
-                        productoSeleccionadoId={item.producto_id}
-                        onSelect={(prodId) => handleItemChange(index, 'producto_id', prodId)}
-                        disabled={yaRecibido > 0}
-                      />
+                  return (
+                    <div key={index} style={itemRowStyle}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ ...labelStyle, fontSize: '12px' }}>Buscar SKU / Insumo del Proveedor</label>
+                        <BuscadorProducto
+                          productos={productosCat}
+                          productoSeleccionadoId={item.producto_id}
+                          onSelect={(prodId) => handleItemChange(index, 'producto_id', prodId)}
+                          disabled={yaRecibido > 0}
+                        />
+                      </div>
+
+                      <div style={{ width: '110px' }}>
+                        <label style={{ ...labelStyle, fontSize: '12px' }}>Cant. Pedida</label>
+                        <input
+                          type="number"
+                          min={yaRecibido > 0 ? yaRecibido : 1}
+                          value={item.cantidad_solicitada}
+                          onChange={(e) => handleItemChange(index, 'cantidad_solicitada', e.target.value)}
+                          style={{ ...inputStyle, textAlign: 'center' }}
+                          required
+                        />
+                      </div>
+
+                      <div style={{ width: '90px', textAlign: 'center' }}>
+                        <label style={{ ...labelStyle, fontSize: '12px' }}>Recibido</label>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            backgroundColor: yaRecibido > 0 ? '#dcfce7' : '#f3f4f6',
+                            color: yaRecibido > 0 ? '#15803d' : '#6b7280',
+                            fontWeight: '700',
+                            fontSize: '13px'
+                          }}
+                        >
+                          {yaRecibido}
+                        </span>
+                      </div>
+
+                      {yaRecibido === 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(index)}
+                          style={buttonRemoveStyle}
+                          title="Eliminar renglón"
+                        >
+                          🗑️
+                        </button>
+                      ) : (
+                        <div style={{ width: '30px' }} title="Bloqueado por recepciones previas">🔒</div>
+                      )}
                     </div>
-
-                    <div style={{ width: '110px' }}>
-                      <label style={{ ...labelStyle, fontSize: '12px' }}>Cant. Pedida</label>
-                      <input
-                        type="number"
-                        min={yaRecibido > 0 ? yaRecibido : 1}
-                        value={item.cantidad_solicitada}
-                        onChange={(e) => handleItemChange(index, 'cantidad_solicitada', e.target.value)}
-                        style={{ ...inputStyle, textAlign: 'center' }}
-                        required
-                      />
-                    </div>
-
-                    <div style={{ width: '90px', textAlign: 'center' }}>
-                      <label style={{ ...labelStyle, fontSize: '12px' }}>Recibido</label>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          padding: '6px 10px',
-                          borderRadius: '6px',
-                          backgroundColor: yaRecibido > 0 ? '#dcfce7' : '#f3f4f6',
-                          color: yaRecibido > 0 ? '#15803d' : '#6b7280',
-                          fontWeight: '700',
-                          fontSize: '13px'
-                        }}
-                      >
-                        {yaRecibido}
-                      </span>
-                    </div>
-
-                    {yaRecibido === 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(index)}
-                        style={buttonRemoveStyle}
-                        title="Eliminar renglón"
-                      >
-                        🗑️
-                      </button>
-                    ) : (
-                      <div style={{ width: '30px' }} title="Bloqueado por recepciones previas">🔒</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div style={footerStyle}>
-              <button type="button" onClick={onClose} style={buttonCancelStyle}>
-                Cancelar
+              {/* Botón de eliminación a la izquierda */}
+              <button
+                type="button"
+                onClick={handleDeleteOC}
+                disabled={submitting || deleting}
+                style={buttonDeleteStyle}
+              >
+                {deleting ? 'Eliminando...' : '🗑️ Eliminar Orden'}
               </button>
-              <button type="submit" disabled={submitting} style={buttonSubmitStyle}>
-                {submitting ? 'Guardando...' : '💾 Guardar Cambios'}
-              </button>
+
+              {/* Botones de acción a la derecha */}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={submitting || deleting}
+                  style={buttonCancelStyle}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || deleting || productosCat.length === 0}
+                  style={buttonSubmitStyle}
+                >
+                  {submitting ? 'Guardando...' : '💾 Guardar Cambios'}
+                </button>
+              </div>
             </div>
           </form>
         )}
@@ -300,9 +373,13 @@ const fieldStyle = { flex: 1 };
 const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '4px' };
 const inputStyle = { width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', fontSize: '14px' };
 const errorStyle = { padding: '10px 14px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' };
+const warningBoxStyle = { padding: '12px', backgroundColor: '#fef3c7', color: '#92400e', borderRadius: '6px', fontSize: '13px', marginBottom: '16px' };
 const itemRowStyle = { display: 'flex', gap: '12px', alignItems: 'center', backgroundColor: '#f9fafb', padding: '10px', borderRadius: '6px', marginBottom: '8px', border: '1px solid #f3f4f6' };
 const buttonAddStyle = { padding: '6px 12px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#ffffff', color: '#2563eb', fontSize: '13px', fontWeight: '600', cursor: 'pointer' };
 const buttonRemoveStyle = { background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', padding: '6px' };
-const footerStyle = { display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #f3f4f6', paddingTop: '16px', marginTop: '12px' };
+
+// Footer con layout 'space-between'
+const footerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f3f4f6', paddingTop: '16px', marginTop: '12px' };
+const buttonDeleteStyle = { padding: '8px 16px', borderRadius: '6px', border: '1px solid #fca5a5', backgroundColor: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontWeight: '600', fontSize: '14px' };
 const buttonCancelStyle = { padding: '8px 16px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#ffffff', color: '#374151', cursor: 'pointer', fontWeight: '600' };
 const buttonSubmitStyle = { padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: '#2563eb', color: '#ffffff', cursor: 'pointer', fontWeight: '600' };

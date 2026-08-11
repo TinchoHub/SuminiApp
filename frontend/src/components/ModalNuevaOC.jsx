@@ -1,12 +1,13 @@
 // frontend/src/components/ModalNuevaOC.jsx
 import React, { useEffect, useState } from 'react';
-import { getProveedores, getProductos, createOrdenCompra } from '../services/api';
+import { getProveedores, getProductosPorProveedor, createOrdenCompra } from '../services/api';
 import { BuscadorProducto } from './BuscadorProducto';
 
 export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
   const [proveedores, setProveedores] = useState([]);
-  const [productosCat, setProductosCat] = useState([]);
+  const [productosProveedor, setProductosProveedor] = useState([]);
   const [loadingCatalogos, setLoadingCatalogos] = useState(false);
+  const [loadingProductos, setLoadingProductos] = useState(false);
 
   // Fecha actual YYYY-MM-DD por defecto
   const hoyStr = new Date().toISOString().split('T')[0];
@@ -21,17 +22,17 @@ export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  // 1. Cargar proveedores al abrir el modal
   useEffect(() => {
     if (isOpen) {
       setLoadingCatalogos(true);
       setError(null);
 
-      Promise.all([getProveedores(), getProductos()])
-        .then(([resProv, resProd]) => {
-          if (resProv.ok) setProveedores(resProv.data);
-          if (resProd.ok) setProductosCat(resProd.data);
+      getProveedores()
+        .then((resProv) => {
+          if (resProv.ok) setProveedores(resProv.data || []);
         })
-        .catch(() => setError('No se pudieron cargar proveedores o productos.'))
+        .catch(() => setError('No se pudieron cargar los proveedores.'))
         .finally(() => setLoadingCatalogos(false));
 
       setProveedorId('');
@@ -40,8 +41,35 @@ export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
       setFechaLimite('');
       setObservaciones('');
       setItems([]);
+      setProductosProveedor([]);
     }
   }, [isOpen]);
+
+  // 2. Cargar sólo los productos asignados cuando cambia el Proveedor seleccionado
+  useEffect(() => {
+    if (!proveedorId) {
+      setProductosProveedor([]);
+      setItems([]);
+      return;
+    }
+
+    setLoadingProductos(true);
+    setItems([]); // Reiniciar ítems elegidos previa selección
+
+    getProductosPorProveedor(proveedorId)
+      .then((res) => {
+        if (res.ok && Array.isArray(res.data)) {
+          setProductosProveedor(res.data);
+        } else {
+          setProductosProveedor([]);
+        }
+      })
+      .catch((err) => {
+        console.error('Error al cargar productos del proveedor:', err);
+        setProductosProveedor([]);
+      })
+      .finally(() => setLoadingProductos(false));
+  }, [proveedorId]);
 
   if (!isOpen) return null;
 
@@ -118,7 +146,7 @@ export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
         {error && <div style={errorStyle}>{error}</div>}
 
         {loadingCatalogos ? (
-          <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>Cargando datos...</p>
+          <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>Cargando proveedores...</p>
         ) : (
           <form onSubmit={handleSubmit}>
             <div style={rowStyle}>
@@ -132,7 +160,9 @@ export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
                 >
                   <option value="">Selecciona un proveedor...</option>
                   {proveedores.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                    <option key={p.id} value={p.id}>
+                      {p.nombre || p.razon_social}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -188,53 +218,74 @@ export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
             <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '18px 0' }} />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, fontSize: '15px', color: '#374151' }}>📦 Insumos / Productos</h3>
-              <button type="button" onClick={handleAddItem} style={buttonAddStyle}>
+              <h3 style={{ margin: 0, fontSize: '15px', color: '#374151' }}>
+                📦 Insumos / Productos {loadingProductos && <small style={{ color: '#2563eb' }}>(Cargando productos...)</small>}
+              </h3>
+              <button
+                type="button"
+                onClick={handleAddItem}
+                disabled={!proveedorId || productosProveedor.length === 0}
+                style={buttonAddStyle}
+              >
                 ➕ Agregar Insumo
               </button>
             </div>
 
-            <div style={{ marginBottom: '20px', maxHeight: '230px', overflowY: 'visible' }}>
-              {items.map((item, index) => (
-                <div key={index} style={itemRowStyle}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ ...labelStyle, fontSize: '12px' }}>Buscar Insumo por SKU / Nombre</label>
-                    <BuscadorProducto
-                      productos={productosCat}
-                      productoSeleccionadoId={item.producto_id}
-                      onSelect={(prodId) => handleItemChange(index, 'producto_id', prodId)}
-                    />
-                  </div>
+            {!proveedorId ? (
+              <div style={infoBoxStyle}>
+                👈 Selecciona un proveedor para cargar los insumos correspondientes.
+              </div>
+            ) : productosProveedor.length === 0 && !loadingProductos ? (
+              <div style={warningBoxStyle}>
+                ⚠️ Este proveedor no posee productos asignados en el catálogo.
+              </div>
+            ) : (
+              <div style={{ marginBottom: '20px', maxHeight: '230px', overflowY: 'visible' }}>
+                {items.map((item, index) => (
+                  <div key={index} style={itemRowStyle}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ ...labelStyle, fontSize: '12px' }}>Buscar Insumo del Proveedor</label>
+                      <BuscadorProducto
+                        productos={productosProveedor} // 👈 Pasa únicamente los productos habilitados
+                        productoSeleccionadoId={item.producto_id}
+                        onSelect={(prodId) => handleItemChange(index, 'producto_id', prodId)}
+                      />
+                    </div>
 
-                  <div style={{ width: '110px' }}>
-                    <label style={{ ...labelStyle, fontSize: '12px' }}>Cantidad</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.cantidad_solicitada}
-                      onChange={(e) => handleItemChange(index, 'cantidad_solicitada', e.target.value)}
-                      style={{ ...inputStyle, textAlign: 'center' }}
-                      required
-                    />
-                  </div>
+                    <div style={{ width: '110px' }}>
+                      <label style={{ ...labelStyle, fontSize: '12px' }}>Cantidad</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.cantidad_solicitada}
+                        onChange={(e) => handleItemChange(index, 'cantidad_solicitada', e.target.value)}
+                        style={{ ...inputStyle, textAlign: 'center' }}
+                        required
+                      />
+                    </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(index)}
-                    style={buttonRemoveStyle}
-                    title="Eliminar renglón"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(index)}
+                      style={buttonRemoveStyle}
+                      title="Eliminar renglón"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div style={footerStyle}>
               <button type="button" onClick={onClose} style={buttonCancelStyle}>
                 Cancelar
               </button>
-              <button type="submit" disabled={submitting} style={buttonSubmitStyle}>
+              <button
+                type="submit"
+                disabled={submitting || !proveedorId || productosProveedor.length === 0}
+                style={buttonSubmitStyle}
+              >
                 {submitting ? 'Guardando...' : '💾 Crear Orden de Compra'}
               </button>
             </div>
@@ -254,6 +305,8 @@ const fieldStyle = { flex: 1 };
 const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '4px' };
 const inputStyle = { width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', fontSize: '14px' };
 const errorStyle = { padding: '10px 14px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' };
+const infoBoxStyle = { padding: '14px', backgroundColor: '#f9fafb', border: '1px dashed #d1d5db', borderRadius: '6px', color: '#6b7280', textAlign: 'center', fontSize: '13px', marginBottom: '16px' };
+const warningBoxStyle = { padding: '12px', backgroundColor: '#fef3c7', color: '#92400e', borderRadius: '6px', fontSize: '13px', marginBottom: '16px' };
 const itemRowStyle = { display: 'flex', gap: '12px', alignItems: 'flex-end', backgroundColor: '#f9fafb', padding: '10px', borderRadius: '6px', marginBottom: '8px', border: '1px solid #f3f4f6' };
 const buttonAddStyle = { padding: '6px 12px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#ffffff', color: '#2563eb', fontSize: '13px', fontWeight: '600', cursor: 'pointer' };
 const buttonRemoveStyle = { background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', padding: '8px 4px' };

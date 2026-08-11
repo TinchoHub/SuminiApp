@@ -213,18 +213,25 @@ const cargarPerfilYPermisos = async (userId) => {
   }, [ordenes, estadosSeleccionados, searchTerm, sortField, sortDir]);
 
   const handleCopyLink = (oc) => {
-    const token = oc.proveedores?.token_acceso;
-    if (!token) {
-      alert('Este proveedor no tiene un token de acceso válido.');
-      return;
-    }
+  // 1. Obtener el token directamente de la Orden de Compra
+  const token = oc.token_acceso;
 
-    const link = `${window.location.origin}/agendar/${token}?oc=${oc.id}`;
-    navigator.clipboard.writeText(link).then(() => {
-      setCopiedId(oc.id);
-      setTimeout(() => setCopiedId(null), 2500);
-    });
-  };
+  if (!token) {
+    alert('Esta Orden de Compra no posee un token de acceso válido.');
+    return;
+  }
+
+  // 2. Construir la URL limpia hacia el portal de agendamiento
+  const link = `${window.location.origin}/agendar/${token}?oc=${oc.id}`;
+  
+  navigator.clipboard.writeText(link).then(() => {
+    setCopiedId(oc.id);
+    setTimeout(() => setCopiedId(null), 2500);
+  }).catch((err) => {
+    console.error('Error al copiar el enlace:', err);
+    alert('No se pudo copiar el enlace.');
+  });
+};
 
   const handleConfirmarTurno = async (ocId) => {
     try {

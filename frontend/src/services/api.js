@@ -45,28 +45,34 @@ export const getRolesYPermisos = async () => (await api.get('/roles')).data;
 export const createRol = async (data) => (await api.post('/roles', data)).data;
 export const updatePermisosRol = async (rolId, modulos) => (await api.put(`/roles/${rolId}/permisos`, { modulos })).data;
 
-// --- OTROS ENDPOINTS ---
+// --- ENDPOINTS PROVEEDORES ---
 export const getProveedores = async () => (await api.get('/proveedores')).data;
 export const createProveedor = async (data) => (await api.post('/proveedores', data)).data;
 export const updateProveedor = async (id, data) => (await api.put(`/proveedores/${id}`, data)).data;
+export const getProductosPorProveedor = async (proveedorId) => (await api.get(`/proveedores/${proveedorId}/productos`)).data;
 
+
+// --- ENDPOINTS PRODUCTOS ---
 export const getProductos = async () => (await api.get('/productos')).data;
 export const createProducto = async (data) => (await api.post('/productos', data)).data;
 export const updateProducto = async (id, data) => (await api.put(`/productos/${id}`, data)).data;
 
+// --- ENDPOINTS ORDENES DE COMPRA ---
 export const getOrdenesCompra = async () => (await api.get('/ordenes-compra')).data;
 export const getOrdenCompraById = async (id) => (await api.get(`/ordenes-compra/${id}`)).data;
 export const createOrdenCompra = async (data) => (await api.post('/ordenes-compra', data)).data;
 export const updateOrdenCompra = async (id, data) => (await api.put(`/ordenes-compra/${id}`, data)).data;
 export const confirmarTurno = async (id) => (await api.put(`/ordenes-compra/${id}/confirmar-turno`)).data;
+export const recibirOrdenCompra = async (id, payload = {}) => { const res = await api.post(`/ordenes-compra/${id}/recibir`, payload); return res.data;};
+export const deleteOrdenCompra = async (id) => {const res = await api.delete(`/ordenes-compra/${id}`); return res.data;};
 
-export const registrarRecepcion = async (data) => (await api.post('/recepciones', data)).data;
-
+export const registrarRecepcion = async (ocId, payload) => {const res = await api.post(`/ordenes-compra/${ocId}/recibir`, payload); return res.data;};
 export const getConfiguracionDisponibilidad = async () => (await api.get('/configuracion-disponibilidad')).data;
 export const updateConfiguracionDisponibilidad = async (configuracion) => (await api.put('/configuracion-disponibilidad', { configuracion })).data;
 export const getTurnosCalendario = async () => (await api.get('/turnos/calendario')).data;
-
-export const validarTokenProveedor = async (token, ocId) => (await api.get(`/portal/validar-token/${token}?oc_id=${ocId}`)).data;
-export const agendarTurnoProveedor = async (data) => (await api.post('/portal/agendar-turno', data)).data;
+export const validarTokenProveedor = async (token, ocId) => {const response = await axios.get(`${API_URL}/portal/validar-token/${token}`, {
+params: { oc: ocId, oc_id: ocId } }); return response.data;};
+export const getConfiguracionDisponibilidadPublica = async () => {const res = await api.get('/public/configuracion-disponibilidad'); return res.data;};
+export const agendarTurnoProveedor = async (payload) => { const response = await axios.post(`${API_URL}/portal/agendar-turno`, payload); return response.data;};
 
 export default api;
