@@ -1,10 +1,19 @@
 // frontend/src/pages/AgendarTurno.jsx
 import React, { useEffect, useState } from 'react';
-import { 
-  validarTokenProveedor, 
-  agendarTurnoProveedor, 
-  getConfiguracionDisponibilidadPublica 
+import {
+  validarTokenProveedor,
+  agendarTurnoProveedor,
+  getConfiguracionDisponibilidadPublica
 } from '../services/api';
+import {
+  IconTruck,
+  IconPackage,
+  IconClock,
+  IconCalendar,
+  IconAlert,
+  IconCheck,
+  IconUser
+} from '../components/Icon';
 
 export default function AgendarTurno() {
   // Extraer token y oc de la URL (Ej: /agendar/token123?oc=UUID)
@@ -81,58 +90,58 @@ export default function AgendarTurno() {
 
   // Validar si el día seleccionado está activo y calcular los horarios permitidos
   const handleFechaChange = (e) => {
-  const selectedDate = e.target.value;
-  setAdvertenciaFecha(null);
+    const selectedDate = e.target.value;
+    setAdvertenciaFecha(null);
 
-  if (!selectedDate) {
-    setFechaTurno('');
-    return;
-  }
-
-  // 1. Validar fecha límite de entrega de la OC
-  if (oc?.fecha_limite_entrega && selectedDate > oc.fecha_limite_entrega) {
-    setAdvertenciaFecha(`⚠️ La fecha seleccionada supera la Fecha Límite de Entrega (${oc.fecha_limite_entrega}).`);
-    setFechaTurno('');
-    return;
-  }
-
-  // 2. Obtener el número de día de la semana (0 = Domingo, 1 = Lunes, ..., 6 = Sábado)
-  const fechaObj = new Date(`${selectedDate}T00:00:00Z`);
-  const numDiaSemana = fechaObj.getUTCDay();
-  const NOMBRES_DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-
-  // 3. Buscar en la configuración por dia_semana (número)
-  if (configDisponibilidad.length > 0) {
-    const configDia = configDisponibilidad.find(
-      (c) => Number(c.dia_semana) === numDiaSemana
-    );
-
-    // Si no existe o está inactivo (activo === false)
-    if (!configDia || !configDia.activo) {
-      setAdvertenciaFecha(`⚠️ Los días ${NOMBRES_DIAS[numDiaSemana]} no están habilitados para recepción de mercadería.`);
+    if (!selectedDate) {
       setFechaTurno('');
       return;
     }
 
-    // 4. Generar la lista de horarios disponibles según el rango configurado para ese día
-    if (configDia.hora_inicio && configDia.hora_fin) {
-      const startH = parseInt(configDia.hora_inicio.split(':')[0], 10) || 8;
-      const endH = parseInt(configDia.hora_fin.split(':')[0], 10) || 17;
+    // 1. Validar fecha límite de entrega de la OC
+    if (oc?.fecha_limite_entrega && selectedDate > oc.fecha_limite_entrega) {
+      setAdvertenciaFecha(`La fecha seleccionada supera la Fecha Límite de Entrega (${oc.fecha_limite_entrega}).`);
+      setFechaTurno('');
+      return;
+    }
 
-      const horasGeneradas = [];
-      for (let h = startH; h < endH; h++) {
-        horasGeneradas.push(h < 10 ? `0${h}:00` : `${h}:00`);
+    // 2. Obtener el número de día de la semana (0 = Domingo, 1 = Lunes, ..., 6 = Sábado)
+    const fechaObj = new Date(`${selectedDate}T00:00:00Z`);
+    const numDiaSemana = fechaObj.getUTCDay();
+    const NOMBRES_DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+    // 3. Buscar en la configuración por dia_semana (número)
+    if (configDisponibilidad.length > 0) {
+      const configDia = configDisponibilidad.find(
+        (c) => Number(c.dia_semana) === numDiaSemana
+      );
+
+      // Si no existe o está inactivo (activo === false)
+      if (!configDia || !configDia.activo) {
+        setAdvertenciaFecha(`Los días ${NOMBRES_DIAS[numDiaSemana]} no están habilitados para recepción de mercadería.`);
+        setFechaTurno('');
+        return;
       }
 
-      if (horasGeneradas.length > 0) {
-        setOpcionesHoras(horasGeneradas);
-        setHoraInicio(horasGeneradas[0]);
+      // 4. Generar la lista de horarios disponibles según el rango configurado para ese día
+      if (configDia.hora_inicio && configDia.hora_fin) {
+        const startH = parseInt(configDia.hora_inicio.split(':')[0], 10) || 8;
+        const endH = parseInt(configDia.hora_fin.split(':')[0], 10) || 17;
+
+        const horasGeneradas = [];
+        for (let h = startH; h < endH; h++) {
+          horasGeneradas.push(h < 10 ? `0${h}:00` : `${h}:00`);
+        }
+
+        if (horasGeneradas.length > 0) {
+          setOpcionesHoras(horasGeneradas);
+          setHoraInicio(horasGeneradas[0]);
+        }
       }
     }
-  }
 
-  setFechaTurno(selectedDate);
-};
+    setFechaTurno(selectedDate);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -167,204 +176,312 @@ export default function AgendarTurno() {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={containerStyle}>
-        <div style={cardStyle}>
-          <p style={{ textAlign: 'center', color: '#6b7280' }}>Verificando enlace de agendamiento...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={containerStyle}>
-        <div style={cardStyle}>
-          <div style={{ textAlign: 'center', fontSize: '40px', marginBottom: '12px' }}>⚠️</div>
-          <h2 style={{ color: '#dc2626', margin: '0 0 12px 0', textAlign: 'center' }}>Acceso Inválido</h2>
-          <p style={{ color: '#4b5563', textAlign: 'center', lineHeight: '1.5' }}>{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (confirmado) {
-    return (
-      <div style={containerStyle}>
-        <div style={cardStyle}>
-          <div style={{ textAlign: 'center', fontSize: '50px', marginBottom: '12px' }}>✅</div>
-          <h2 style={{ color: '#16a34a', margin: '0 0 8px 0', textAlign: 'center' }}>¡Turno Solicitado Con Éxito!</h2>
-          <p style={{ color: '#4b5563', textAlign: 'center', marginBottom: '20px' }}>
-            Hemos registrado tu solicitud de entrega para la Orden de Compra <strong>{oc?.numero_oc}</strong>.
-          </p>
-          <div style={{ backgroundColor: '#f9fafb', padding: '16px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '14px', color: '#374151' }}>
-            <p style={{ margin: '4px 0' }}>📅 <strong>Fecha:</strong> {fechaTurno}</p>
-            <p style={{ margin: '4px 0' }}>⏰ <strong>Hora estimada:</strong> {horaInicio} hs</p>
-            <p style={{ margin: '4px 0' }}>🚘 <strong>Patente:</strong> {patenteVehiculo.toUpperCase()}</p>
-            {datosChofer && <p style={{ margin: '4px 0' }}>👤 <strong>Chofer:</strong> {datosChofer}</p>}
-          </div>
-          <p style={{ fontSize: '13px', color: '#6b7280', textAlign: 'center', marginTop: '20px' }}>
-            El equipo de depósito confirmará la recepción a la brevedad. Podrás cerrar esta ventana.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   const hoyStr = new Date().toISOString().split('T')[0];
 
   return (
-    <div style={containerStyle}>
-      <div style={cardStyle}>
-        <div style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: '16px', marginBottom: '20px' }}>
-          <span style={{ fontSize: '12px', fontWeight: '700', color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Portal de Proveedores
-          </span>
-          <h2 style={{ margin: '4px 0 0', color: '#111827', fontSize: '22px' }}>Agendar Turno de Entrega</h2>
-          <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '14px' }}>
-            Proveedor: <strong>{proveedor?.nombre}</strong>
+    <div style={styles.page}>
+      <Tokens />
+
+      {loading && (
+        <div style={styles.card}>
+          <div style={styles.centerState}>
+            <div style={styles.spinner} />
+            <p style={styles.mutedText}>Verificando enlace de agendamiento…</p>
+          </div>
+        </div>
+      )}
+
+      {!loading && error && (
+        <div style={styles.card}>
+          <div style={styles.centerState}>
+            <div style={{ ...styles.stateIcon, background: 'var(--danger-soft)', color: 'var(--danger)' }}>
+              <IconAlert size={26} />
+            </div>
+            <h2 style={styles.stateTitle}>Acceso inválido</h2>
+            <p style={styles.mutedText}>{error}</p>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && confirmado && (
+        <div style={styles.card}>
+          <div style={styles.centerState}>
+            <div style={{ ...styles.stateIcon, background: 'var(--ok-soft)', color: 'var(--ok)' }}>
+              <IconCheck size={28} />
+            </div>
+            <h2 style={styles.stateTitle}>Turno solicitado con éxito</h2>
+            <p style={styles.mutedText}>
+              Registramos tu solicitud de entrega para la Orden de Compra <strong>{oc?.numero_oc}</strong>.
+            </p>
+          </div>
+
+          <div style={styles.summaryBox}>
+            <ResumenItem icon={<IconCalendar size={16} />} label="Fecha" value={fechaTurno} />
+            <ResumenItem icon={<IconClock size={16} />} label="Hora estimada" value={`${horaInicio} hs`} />
+            <ResumenItem icon={<IconTruck size={16} />} label="Patente" value={patenteVehiculo.toUpperCase()} />
+            {datosChofer && <ResumenItem icon={<IconUser size={16} />} label="Chofer" value={datosChofer} />}
+          </div>
+
+          <p style={{ ...styles.mutedText, fontSize: 13, marginTop: 20 }}>
+            El equipo de depósito confirmará la recepción a la brevedad. Podés cerrar esta ventana.
           </p>
         </div>
+      )}
 
-        {/* Resumen de la Orden de Compra */}
-        <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '14px', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontWeight: '700', color: '#1e40af', fontSize: '15px' }}>OC: {oc?.numero_oc}</span>
-            <span style={{ fontSize: '13px', color: '#dc2626', fontWeight: '600' }}>
-              ⏰ Entrega Límite: {oc?.fecha_limite_entrega || 'No especificada'}
-            </span>
+      {!loading && !error && !confirmado && (
+        <div style={styles.card}>
+          <div style={styles.header}>
+            <div style={styles.brandRow}>
+              <div style={styles.brandMark}>
+                <IconTruck size={20} />
+              </div>
+              <span style={styles.kicker}>Portal de Proveedores</span>
+            </div>
+            <h1 style={styles.title}>Agendar turno de entrega</h1>
+            <p style={styles.mutedText}>
+              Proveedor: <strong style={{ color: 'var(--ink)' }}>{proveedor?.nombre}</strong>
+            </p>
           </div>
 
-          <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#1e3a8a' }}><strong>Detalle de Insumos Solicitados:</strong></p>
-          <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#1e3a8a' }}>
-            {oc?.orden_compra_items?.map((item) => (
-              <li key={item.id}>
-                {item.productos?.sku} - {item.productos?.descripcion} ({item.cantidad_solicitada} {item.productos?.unidad_medida || 'UNIDADES'})
-              </li>
-            ))}
-          </ul>
-        </div>
+          {/* Resumen de la Orden de Compra */}
+          <div style={styles.ocBox}>
+            <div style={styles.ocHead}>
+              <span style={styles.ocNumber}>
+                <IconPackage size={16} style={{ verticalAlign: '-3px', marginRight: 6 }} />
+                OC {oc?.numero_oc}
+              </span>
+              <span style={styles.ocLimit}>
+                <IconClock size={14} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+                Entrega límite: {oc?.fecha_limite_entrega || 'No especificada'}
+              </span>
+            </div>
 
-        {/* Mensaje de advertencia si elige una fecha no permitida */}
-        {advertenciaFecha && (
-          <div style={{ padding: '12px 14px', backgroundColor: '#fef3c7', color: '#92400e', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', fontWeight: '600' }}>
-            {advertenciaFecha}
+            <p style={styles.ocSubtitle}>Detalle de insumos solicitados</p>
+            <ul style={styles.ocList}>
+              {oc?.orden_compra_items?.map((item) => (
+                <li key={item.id} style={styles.ocListItem}>
+                  <span style={styles.sku}>{item.productos?.sku}</span>
+                  {' '}{item.productos?.descripcion}
+                  <span style={styles.qty}>
+                    {item.cantidad_solicitada} {item.productos?.unidad_medida || 'UNIDADES'}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
-        )}
 
-        {/* Formulario de Agendamiento */}
-        <form onSubmit={handleSubmit}>
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Fecha de Entrega *</label>
+          {/* Mensaje de advertencia si elige una fecha no permitida */}
+          {advertenciaFecha && (
+            <div style={styles.warning}>
+              <IconAlert size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>{advertenciaFecha}</span>
+            </div>
+          )}
+
+          {/* Formulario de Agendamiento */}
+          <form onSubmit={handleSubmit}>
+            <div style={styles.grid2}>
+              <div>
+                <label style={styles.label}>Fecha de entrega *</label>
+                <input
+                  type="date"
+                  min={hoyStr}
+                  max={oc?.fecha_limite_entrega || undefined}
+                  value={fechaTurno}
+                  onChange={handleFechaChange}
+                  required
+                  style={styles.input}
+                />
+              </div>
+
+              <div>
+                <label style={styles.label}>Horario estimado *</label>
+                <select
+                  value={horaInicio}
+                  onChange={(e) => setHoraInicio(e.target.value)}
+                  required
+                  style={{ ...styles.input, opacity: fechaTurno ? 1 : 0.55 }}
+                  disabled={!fechaTurno}
+                >
+                  {opcionesHoras.map((hora) => (
+                    <option key={hora} value={hora}>{hora} hs</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={styles.label}>Patente del vehículo / camión *</label>
               <input
-                type="date"
-                min={hoyStr}
-                max={oc?.fecha_limite_entrega || undefined}
-                value={fechaTurno}
-                onChange={handleFechaChange}
+                type="text"
+                placeholder="Ej: AA123CD o AB123CD"
+                value={patenteVehiculo}
+                onChange={(e) => setPatenteVehiculo(e.target.value)}
                 required
-                style={inputStyle}
+                style={styles.input}
               />
             </div>
 
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Horario Estimado *</label>
-              <select
-                value={horaInicio}
-                onChange={(e) => setHoraInicio(e.target.value)}
-                required
-                style={inputStyle}
-                disabled={!fechaTurno}
-              >
-                {opcionesHoras.map((hora) => (
-                  <option key={hora} value={hora}>
-                    {hora} hs
-                  </option>
-                ))}
-              </select>
+            <div style={{ marginBottom: 22 }}>
+              <label style={styles.label}>Nombre y DNI del chofer (opcional)</label>
+              <input
+                type="text"
+                placeholder="Ej: Juan Pérez - DNI 35.123.456"
+                value={datosChofer}
+                onChange={(e) => setDatosChofer(e.target.value)}
+                style={styles.input}
+              />
             </div>
-          </div>
 
-          <div style={{ marginBottom: '14px' }}>
-            <label style={labelStyle}>Patente del Vehículo / Camión *</label>
-            <input
-              type="text"
-              placeholder="Ej: AA123CD o AB123CD"
-              value={patenteVehiculo}
-              onChange={(e) => setPatenteVehiculo(e.target.value)}
-              required
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={labelStyle}>Nombre y DNI del Chófer (Opcional)</label>
-            <input
-              type="text"
-              placeholder="Ej: Juan Pérez - DNI 35.123.456"
-              value={datosChofer}
-              onChange={(e) => setDatosChofer(e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-
-          <button type="submit" disabled={submitting || !fechaTurno} style={buttonStyle}>
-            {submitting ? 'Reservando turno...' : '📅 Confirmar y Agendar Turno'}
-          </button>
-        </form>
-      </div>
+            <button type="submit" disabled={submitting || !fechaTurno} style={{
+              ...styles.button,
+              opacity: (submitting || !fechaTurno) ? 0.6 : 1,
+              cursor: (submitting || !fechaTurno) ? 'not-allowed' : 'pointer'
+            }}>
+              <IconCalendar size={18} />
+              {submitting ? 'Reservando turno…' : 'Confirmar y agendar turno'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
 
-// Estilos
-const containerStyle = {
-  minHeight: '100vh',
-  backgroundColor: '#f3f4f6',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  padding: '16px',
-  fontFamily: 'system-ui, sans-serif'
-};
+function ResumenItem({ icon, label, value }) {
+  return (
+    <div style={styles.resumenItem}>
+      <span style={styles.resumenIcon}>{icon}</span>
+      <span style={styles.resumenLabel}>{label}</span>
+      <span style={styles.resumenValue}>{value}</span>
+    </div>
+  );
+}
 
-const cardStyle = {
-  backgroundColor: '#ffffff',
-  borderRadius: '12px',
-  maxWidth: '560px',
-  width: '100%',
-  padding: '28px',
-  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-  border: '1px solid #e5e7eb'
-};
+// Tokens de estilo + fuente, inyectados una sola vez (pagina publica independiente)
+function Tokens() {
+  return (
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+      :root {
+        --ink: #211c17;
+        --ink-2: #4a4038;
+        --muted: #8c8172;
+        --line: #e6ded0;
+        --paper: #f5f0e6;
+        --card: #fffdf9;
+        --accent: #c2660a;
+        --accent-soft: #f6e6d0;
+        --ok: #3f6b1f;
+        --ok-soft: #e9ecdd;
+        --danger: #9c2b1f;
+        --danger-soft: #f3e0da;
+        --warn: #9a4508;
+        --warn-soft: #f6e6d0;
+      }
+      .agendar-spin { animation: agendarSpin 0.8s linear infinite; }
+      @keyframes agendarSpin { to { transform: rotate(360deg); } }
+    `}</style>
+  );
+}
 
-const labelStyle = {
-  display: 'block',
-  fontSize: '13px',
-  fontWeight: '600',
-  color: '#374151',
-  marginBottom: '6px'
-};
+const styles = {
+  page: {
+    minHeight: '100vh',
+    background: 'var(--paper)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    padding: '48px 16px',
+    fontFamily: "'Inter', system-ui, sans-serif",
+    color: 'var(--ink)'
+  },
+  card: {
+    background: 'var(--card)',
+    borderRadius: 7,
+    maxWidth: 580,
+    width: '100%',
+    padding: 32,
+    border: '1px solid var(--line)',
+    boxShadow: '0 1px 2px rgba(26,29,36,0.04), 0 24px 48px -24px rgba(26,29,36,0.18)'
+  },
+  header: { borderBottom: '1px solid var(--line)', paddingBottom: 20, marginBottom: 22 },
+  brandRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 },
+  brandMark: {
+    width: 40, height: 40, borderRadius: 7,
+    background: 'var(--ink)', color: 'var(--paper)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
+  },
+  kicker: {
+    fontSize: 11, fontWeight: 700, color: 'var(--accent)',
+    textTransform: 'uppercase', letterSpacing: '1px'
+  },
+  title: { margin: '0 0 6px', fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' },
+  mutedText: { margin: 0, color: 'var(--muted)', fontSize: 14, lineHeight: 1.5 },
 
-const inputStyle = {
-  width: '100%',
-  padding: '10px 12px',
-  borderRadius: '6px',
-  border: '1px solid #d1d5db',
-  fontSize: '14px',
-  boxSizing: 'border-box'
-};
+  ocBox: {
+    background: 'var(--paper)', border: '1px solid var(--line)',
+    borderRadius: 8, padding: 16, marginBottom: 20
+  },
+  ocHead: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    gap: 10, flexWrap: 'wrap', marginBottom: 12
+  },
+  ocNumber: { fontWeight: 700, fontSize: 15, color: 'var(--ink)' },
+  ocLimit: {
+    fontSize: 12, fontWeight: 600, color: 'var(--danger)',
+    background: 'var(--danger-soft)', padding: '4px 10px', borderRadius: 4
+  },
+  ocSubtitle: {
+    margin: '0 0 8px', fontSize: 11, fontWeight: 700,
+    textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)'
+  },
+  ocList: { margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 },
+  ocListItem: {
+    fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5,
+    paddingLeft: 12, borderLeft: '2px solid var(--accent)'
+  },
+  sku: {
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+    fontWeight: 700, color: 'var(--ink)', fontSize: 12
+  },
+  qty: { color: 'var(--muted)', fontWeight: 600, marginLeft: 4 },
 
-const buttonStyle = {
-  width: '100%',
-  padding: '12px',
-  borderRadius: '6px',
-  border: 'none',
-  backgroundColor: '#16a34a',
-  color: '#ffffff',
-  fontSize: '15px',
-  fontWeight: '700',
-  cursor: 'pointer'
+  warning: {
+    display: 'flex', gap: 8, alignItems: 'flex-start',
+    padding: '12px 14px', background: 'var(--warn-soft)', color: 'var(--warn)',
+    borderRadius: 7, marginBottom: 18, fontSize: 13, fontWeight: 600, lineHeight: 1.45
+  },
+
+  grid2: { display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap' },
+  label: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 6 },
+  input: {
+    width: '100%', padding: '11px 12px', borderRadius: 6,
+    border: '1px solid var(--line)', fontSize: 14, boxSizing: 'border-box',
+    fontFamily: 'inherit', color: 'var(--ink)', background: 'var(--card)', outline: 'none'
+  },
+  button: {
+    width: '100%', padding: '13px', borderRadius: 7, border: 'none',
+    background: 'var(--accent)', color: '#fff', fontSize: 15, fontWeight: 700,
+    fontFamily: 'inherit', display: 'flex', alignItems: 'center',
+    justifyContent: 'center', gap: 8
+  },
+
+  centerState: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12, padding: '12px 0' },
+  stateIcon: { width: 56, height: 56, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  stateTitle: { margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--ink)' },
+  spinner: {
+    width: 32, height: 32, borderRadius: '50%',
+    border: '3px solid var(--line)', borderTopColor: 'var(--accent)',
+    animation: 'agendarSpin 0.8s linear infinite'
+  },
+
+  summaryBox: {
+    background: 'var(--paper)', padding: 16, borderRadius: 8,
+    border: '1px solid var(--line)', display: 'grid', gap: 10, marginTop: 20
+  },
+  resumenItem: { display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 },
+  resumenIcon: { color: 'var(--accent)', display: 'flex' },
+  resumenLabel: { color: 'var(--muted)', fontWeight: 600, minWidth: 96 },
+  resumenValue: { color: 'var(--ink)', fontWeight: 700 }
 };

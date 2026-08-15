@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { getProveedores, getProductosPorProveedor, createOrdenCompra } from '../services/api';
 import { BuscadorProducto } from './BuscadorProducto';
+import { IconClipboard, IconClose, IconPlus, IconTrash, IconPackage, IconInfo, IconAlert, IconSave } from './Icon';
 
 export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
   const [proveedores, setProveedores] = useState([]);
@@ -136,17 +137,20 @@ export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
   };
 
   return (
-    <div style={overlayStyle}>
+    <div style={overlayStyle} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div style={modalStyle}>
         <div style={headerStyle}>
-          <h2 style={{ margin: 0, color: '#111827', fontSize: '20px' }}>📄 Nueva Orden de Compra</h2>
-          <button onClick={onClose} style={closeButtonStyle}>✕</button>
+          <div style={titleWrapStyle}>
+            <span style={titleIconStyle}><IconClipboard size={18} /></span>
+            <h2 style={titleStyle}>Nueva Orden de Compra</h2>
+          </div>
+          <button onClick={onClose} style={closeButtonStyle} aria-label="Cerrar"><IconClose size={18} /></button>
         </div>
 
-        {error && <div style={errorStyle}>{error}</div>}
+        {error && <div style={errorStyle}><IconAlert size={16} /><span>{error}</span></div>}
 
         {loadingCatalogos ? (
-          <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>Cargando proveedores...</p>
+          <p style={loadingStyle}>Cargando proveedores...</p>
         ) : (
           <form onSubmit={handleSubmit}>
             <div style={rowStyle}>
@@ -215,44 +219,48 @@ export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
               />
             </div>
 
-            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '18px 0' }} />
+            <hr style={dividerStyle} />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, fontSize: '15px', color: '#374151' }}>
-                📦 Insumos / Productos {loadingProductos && <small style={{ color: '#2563eb' }}>(Cargando productos...)</small>}
+            <div style={sectionHeadStyle}>
+              <h3 style={sectionTitleStyle}>
+                <IconPackage size={16} />
+                Insumos / Productos
+                {loadingProductos && <small style={{ color: '#9a4508', fontWeight: 600 }}>(Cargando...)</small>}
               </h3>
               <button
                 type="button"
                 onClick={handleAddItem}
                 disabled={!proveedorId || productosProveedor.length === 0}
-                style={buttonAddStyle}
+                style={{ ...buttonAddStyle, opacity: (!proveedorId || productosProveedor.length === 0) ? 0.5 : 1 }}
               >
-                ➕ Agregar Insumo
+                <IconPlus size={15} /> Agregar Insumo
               </button>
             </div>
 
             {!proveedorId ? (
               <div style={infoBoxStyle}>
-                👈 Selecciona un proveedor para cargar los insumos correspondientes.
+                <IconInfo size={16} />
+                <span>Selecciona un proveedor para cargar los insumos correspondientes.</span>
               </div>
             ) : productosProveedor.length === 0 && !loadingProductos ? (
               <div style={warningBoxStyle}>
-                ⚠️ Este proveedor no posee productos asignados en el catálogo.
+                <IconAlert size={16} />
+                <span>Este proveedor no posee productos asignados en el catálogo.</span>
               </div>
             ) : (
-              <div style={{ marginBottom: '20px', maxHeight: '230px', overflowY: 'visible' }}>
+              <div style={{ marginBottom: '20px' }}>
                 {items.map((item, index) => (
                   <div key={index} style={itemRowStyle}>
                     <div style={{ flex: 1 }}>
                       <label style={{ ...labelStyle, fontSize: '12px' }}>Buscar Insumo del Proveedor</label>
                       <BuscadorProducto
-                        productos={productosProveedor} // 👈 Pasa únicamente los productos habilitados
+                        productos={productosProveedor}
                         productoSeleccionadoId={item.producto_id}
                         onSelect={(prodId) => handleItemChange(index, 'producto_id', prodId)}
                       />
                     </div>
 
-                    <div style={{ width: '110px' }}>
+                    <div style={{ width: '104px' }}>
                       <label style={{ ...labelStyle, fontSize: '12px' }}>Cantidad</label>
                       <input
                         type="number"
@@ -270,7 +278,7 @@ export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
                       style={buttonRemoveStyle}
                       title="Eliminar renglón"
                     >
-                      🗑️
+                      <IconTrash size={16} />
                     </button>
                   </div>
                 ))}
@@ -284,9 +292,10 @@ export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
               <button
                 type="submit"
                 disabled={submitting || !proveedorId || productosProveedor.length === 0}
-                style={buttonSubmitStyle}
+                style={{ ...buttonSubmitStyle, opacity: (submitting || !proveedorId || productosProveedor.length === 0) ? 0.6 : 1 }}
               >
-                {submitting ? 'Guardando...' : '💾 Crear Orden de Compra'}
+                <IconSave size={16} />
+                {submitting ? 'Guardando...' : 'Crear Orden de Compra'}
               </button>
             </div>
           </form>
@@ -296,20 +305,28 @@ export function ModalNuevaOC({ isOpen, onClose, onOCCreated }) {
   );
 }
 
-const overlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '16px' };
-const modalStyle = { backgroundColor: '#ffffff', borderRadius: '8px', width: '100%', maxWidth: '680px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', fontFamily: 'system-ui, sans-serif' };
-const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #f3f4f6', paddingBottom: '12px' };
-const closeButtonStyle = { background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9ca3af' };
-const rowStyle = { display: 'flex', gap: '16px', marginBottom: '14px' };
-const fieldStyle = { flex: 1 };
-const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '4px' };
-const inputStyle = { width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', fontSize: '14px' };
-const errorStyle = { padding: '10px 14px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' };
-const infoBoxStyle = { padding: '14px', backgroundColor: '#f9fafb', border: '1px dashed #d1d5db', borderRadius: '6px', color: '#6b7280', textAlign: 'center', fontSize: '13px', marginBottom: '16px' };
-const warningBoxStyle = { padding: '12px', backgroundColor: '#fef3c7', color: '#92400e', borderRadius: '6px', fontSize: '13px', marginBottom: '16px' };
-const itemRowStyle = { display: 'flex', gap: '12px', alignItems: 'flex-end', backgroundColor: '#f9fafb', padding: '10px', borderRadius: '6px', marginBottom: '8px', border: '1px solid #f3f4f6' };
-const buttonAddStyle = { padding: '6px 12px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#ffffff', color: '#2563eb', fontSize: '13px', fontWeight: '600', cursor: 'pointer' };
-const buttonRemoveStyle = { background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', padding: '8px 4px' };
-const footerStyle = { display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #f3f4f6', paddingTop: '16px', marginTop: '12px' };
-const buttonCancelStyle = { padding: '8px 16px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#ffffff', color: '#374151', cursor: 'pointer', fontWeight: '600' };
-const buttonSubmitStyle = { padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: '#16a34a', color: '#ffffff', cursor: 'pointer', fontWeight: '600' };
+const FONT = "'Inter', system-ui, sans-serif";
+const overlayStyle = { position: 'fixed', inset: 0, backgroundColor: 'rgba(16,18,22,0.55)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '16px' };
+const modalStyle = { backgroundColor: '#fffdf9', borderRadius: '10px', width: '100%', maxWidth: '700px', maxHeight: '92vh', overflowY: 'auto', padding: '24px', boxShadow: '0 24px 60px rgba(16,18,22,0.28)', fontFamily: FONT, border: '1px solid #e6ded0' };
+const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #f1ebe0', paddingBottom: '14px' };
+const titleWrapStyle = { display: 'flex', alignItems: 'center', gap: '11px' };
+const titleIconStyle = { width: '34px', height: '34px', borderRadius: '9px', backgroundColor: '#f6e6d0', color: '#9a4508', display: 'grid', placeItems: 'center' };
+const titleStyle = { margin: 0, color: '#211c17', fontSize: '18px', fontWeight: 800, letterSpacing: '-0.01em' };
+const closeButtonStyle = { display: 'grid', placeItems: 'center', width: '32px', height: '32px', background: '#f1ebe0', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#8c8172' };
+const loadingStyle = { textAlign: 'center', color: '#8c8172', padding: '20px', fontSize: '14px' };
+const rowStyle = { display: 'flex', gap: '16px', marginBottom: '14px', flexWrap: 'wrap' };
+const fieldStyle = { flex: 1, minWidth: '200px' };
+const labelStyle = { display: 'block', fontSize: '13px', fontWeight: 600, color: '#4a4038', marginBottom: '5px' };
+const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: '9px', border: '1px solid #e6ded0', boxSizing: 'border-box', fontSize: '14px', fontFamily: FONT, color: '#211c17', backgroundColor: '#fffdf9', outline: 'none' };
+const errorStyle = { display: 'flex', alignItems: 'center', gap: '9px', padding: '11px 14px', backgroundColor: '#f3e0da', color: '#9c2b1f', border: '1px solid #e6c4b8', borderRadius: '10px', marginBottom: '16px', fontSize: '13.5px', fontWeight: 500 };
+const dividerStyle = { border: 'none', borderTop: '1px solid #f1ebe0', margin: '18px 0' };
+const sectionHeadStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '12px', flexWrap: 'wrap' };
+const sectionTitleStyle = { display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '14px', fontWeight: 700, color: '#211c17' };
+const infoBoxStyle = { display: 'flex', alignItems: 'center', gap: '10px', padding: '14px', backgroundColor: '#f5f0e6', border: '1px dashed #ddd3c2', borderRadius: '10px', color: '#8c8172', fontSize: '13px', marginBottom: '16px' };
+const warningBoxStyle = { display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', backgroundColor: '#f6e6d0', color: '#9a4508', border: '1px solid #ecd3ab', borderRadius: '10px', fontSize: '13px', marginBottom: '16px' };
+const itemRowStyle = { display: 'flex', gap: '12px', alignItems: 'flex-end', backgroundColor: '#faf2e2', padding: '12px', borderRadius: '10px', marginBottom: '8px', border: '1px solid #ecdcc5' };
+const buttonAddStyle = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '9px', border: '1px solid #ecd3ab', backgroundColor: '#f6e6d0', color: '#9a4508', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: FONT };
+const buttonRemoveStyle = { display: 'grid', placeItems: 'center', width: '38px', height: '38px', background: '#f3e0da', border: '1px solid #e6c4b8', borderRadius: '9px', cursor: 'pointer', color: '#9c2b1f', flexShrink: 0 };
+const footerStyle = { display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #f1ebe0', paddingTop: '16px', marginTop: '12px' };
+const buttonCancelStyle = { padding: '10px 16px', borderRadius: '9px', border: '1px solid #e6ded0', backgroundColor: '#fffdf9', color: '#4a4038', cursor: 'pointer', fontWeight: 600, fontFamily: FONT, fontSize: '14px' };
+const buttonSubmitStyle = { display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '10px 18px', borderRadius: '9px', border: 'none', backgroundColor: '#211c17', color: '#fffdf9', cursor: 'pointer', fontWeight: 700, fontFamily: FONT, fontSize: '14px' };

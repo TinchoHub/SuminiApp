@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { registrarRecepcion } from '../services/api';
+import { IconPackage, IconClose, IconAlert, IconSave } from './Icon';
 
 export function ModalRecepcion({ isOpen, onClose, oc, onRecepcionSuccess }) {
   const [itemsRecibidos, setItemsRecibidos] = useState({});
@@ -64,39 +65,40 @@ export function ModalRecepcion({ isOpen, onClose, oc, onRecepcionSuccess }) {
   const items = oc.orden_compra_items || [];
 
   return (
-    <div style={overlayStyle}>
+    <div style={overlayStyle} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div style={modalStyle}>
         <div style={headerStyle}>
-          <div>
-            <h2 style={{ margin: 0, color: '#111827', fontSize: '20px' }}>📦 Recepción de Mercadería</h2>
-            <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '14px' }}>
-              Orden de Compra: <strong>{oc.numero_oc}</strong> | Proveedor: <strong>{oc.proveedores?.nombre}</strong>
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+            <span style={titleIconStyle}><IconPackage size={18} /></span>
+            <div>
+              <h2 style={titleStyle}>Recepción de Mercadería</h2>
+              <p style={subtitleStyle}>
+                OC <strong style={{ color: '#211c17' }}>{oc.numero_oc}</strong>
+                <span style={{ margin: '0 6px', color: '#b6a996' }}>·</span>
+                {oc.proveedores?.nombre}
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} style={closeButtonStyle}>✕</button>
+          <button onClick={onClose} style={closeButtonStyle} aria-label="Cerrar"><IconClose size={18} /></button>
         </div>
 
-        {error && (
-          <div style={errorStyle}>
-            {error}
-          </div>
-        )}
+        {error && <div style={errorStyle}><IconAlert size={16} /><span>{error}</span></div>}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px', maxHeight: '350px', overflowY: 'auto' }}>
+          <div style={tableWrapStyle}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
               <thead>
-                <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                  <th style={{ padding: '10px' }}>SKU / Insumo</th>
-                  <th style={{ padding: '10px', textAlign: 'center' }}>Pedida</th>
-                  <th style={{ padding: '10px', textAlign: 'center' }}>Recibida Previa</th>
-                  <th style={{ padding: '10px', textAlign: 'center', width: '130px' }}>Ingresa Ahora</th>
+                <tr>
+                  <th style={thStyle}>SKU / Insumo</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Pedida</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Recibida Previa</th>
+                  <th style={{ ...thStyle, textAlign: 'center', width: '130px' }}>Ingresa Ahora</th>
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan="4" style={{ padding: '16px', textAlign: 'center', color: '#6b7280' }}>
+                    <td colSpan="4" style={{ padding: '18px', textAlign: 'center', color: '#8c8172' }}>
                       Esta Orden de Compra no posee ítems detallados.
                     </td>
                   </tr>
@@ -109,19 +111,20 @@ export function ModalRecepcion({ isOpen, onClose, oc, onRecepcionSuccess }) {
                     const pendiente = solicitada - recibida;
 
                     return (
-                      <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                        <td style={{ padding: '10px' }}>
-                          <span style={{ fontWeight: '600', color: '#2563eb' }}>{sku}</span>
+                      <tr key={item.id} style={{ borderBottom: '1px solid #f1ebe0' }}>
+                        <td style={tdStyle}>
+                          <span style={{ fontWeight: 700, color: '#9a4508', fontVariantNumeric: 'tabular-nums' }}>{sku}</span>
                           <br />
-                          <small style={{ color: '#4b5563' }}>{descripcion}</small>
+                          <small style={{ color: '#8c8172' }}>{descripcion}</small>
                         </td>
-                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: '600' }}>
+                        <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700, color: '#211c17', fontVariantNumeric: 'tabular-nums' }}>
                           {solicitada}
                         </td>
-                        <td style={{ padding: '10px', textAlign: 'center', color: recibida > 0 ? '#16a34a' : '#6b7280' }}>
-                          {recibida} {pendiente > 0 && <small style={{ color: '#dc2626' }}>(Falta {pendiente})</small>}
+                        <td style={{ ...tdStyle, textAlign: 'center', color: recibida > 0 ? '#3f6b1f' : '#8c8172', fontVariantNumeric: 'tabular-nums' }}>
+                          {recibida}{' '}
+                          {pendiente > 0 && <small style={{ color: '#9c2b1f' }}>(Falta {pendiente})</small>}
                         </td>
-                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                        <td style={{ ...tdStyle, textAlign: 'center' }}>
                           <input
                             type="number"
                             min="0"
@@ -144,8 +147,13 @@ export function ModalRecepcion({ isOpen, onClose, oc, onRecepcionSuccess }) {
             <button type="button" onClick={onClose} style={buttonCancelStyle}>
               Cancelar
             </button>
-            <button type="submit" disabled={submitting || items.length === 0} style={buttonSubmitStyle}>
-              {submitting ? 'Guardando...' : '💾 Registrar Recepción'}
+            <button
+              type="submit"
+              disabled={submitting || items.length === 0}
+              style={{ ...buttonSubmitStyle, opacity: (submitting || items.length === 0) ? 0.6 : 1 }}
+            >
+              <IconSave size={16} />
+              {submitting ? 'Guardando...' : 'Registrar Recepción'}
             </button>
           </div>
         </form>
@@ -154,91 +162,19 @@ export function ModalRecepcion({ isOpen, onClose, oc, onRecepcionSuccess }) {
   );
 }
 
-// Estilos
-const overlayStyle = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 1000,
-  padding: '16px'
-};
-
-const modalStyle = {
-  backgroundColor: '#ffffff',
-  borderRadius: '8px',
-  width: '100%',
-  maxWidth: '650px',
-  padding: '24px',
-  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-  fontFamily: 'system-ui, sans-serif'
-};
-
-const headerStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
-  marginBottom: '16px',
-  borderBottom: '1px solid #f3f4f6',
-  paddingBottom: '12px'
-};
-
-const closeButtonStyle = {
-  background: 'none',
-  border: 'none',
-  fontSize: '18px',
-  cursor: 'pointer',
-  color: '#9ca3af'
-};
-
-const errorStyle = {
-  padding: '10px 14px',
-  backgroundColor: '#fee2e2',
-  color: '#991b1b',
-  borderRadius: '6px',
-  marginBottom: '16px',
-  fontSize: '14px'
-};
-
-const inputNumberStyle = {
-  width: '80px',
-  padding: '6px 8px',
-  borderRadius: '6px',
-  border: '1px solid #d1d5db',
-  textAlign: 'center',
-  fontSize: '14px',
-  fontWeight: '600'
-};
-
-const footerStyle = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: '12px',
-  borderTop: '1px solid #f3f4f6',
-  paddingTop: '16px'
-};
-
-const buttonCancelStyle = {
-  padding: '8px 16px',
-  borderRadius: '6px',
-  border: '1px solid #d1d5db',
-  backgroundColor: '#ffffff',
-  color: '#374151',
-  cursor: 'pointer',
-  fontWeight: '600'
-};
-
-const buttonSubmitStyle = {
-  padding: '8px 16px',
-  borderRadius: '6px',
-  border: 'none',
-  backgroundColor: '#16a34a',
-  color: '#ffffff',
-  cursor: 'pointer',
-  fontWeight: '600'
-};
+const FONT = "'Inter', system-ui, sans-serif";
+const overlayStyle = { position: 'fixed', inset: 0, backgroundColor: 'rgba(16,18,22,0.55)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '16px' };
+const modalStyle = { backgroundColor: '#fffdf9', borderRadius: '10px', width: '100%', maxWidth: '660px', maxHeight: '92vh', overflowY: 'auto', padding: '24px', boxShadow: '0 24px 60px rgba(16,18,22,0.28)', fontFamily: FONT, border: '1px solid #e6ded0' };
+const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', borderBottom: '1px solid #f1ebe0', paddingBottom: '14px' };
+const titleIconStyle = { width: '34px', height: '34px', borderRadius: '9px', backgroundColor: '#f6e6d0', color: '#9a4508', display: 'grid', placeItems: 'center', flexShrink: 0 };
+const titleStyle = { margin: 0, color: '#211c17', fontSize: '18px', fontWeight: 800, letterSpacing: '-0.01em' };
+const subtitleStyle = { margin: '3px 0 0', color: '#8c8172', fontSize: '13px' };
+const closeButtonStyle = { display: 'grid', placeItems: 'center', width: '32px', height: '32px', background: '#f1ebe0', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#8c8172', flexShrink: 0 };
+const errorStyle = { display: 'flex', alignItems: 'center', gap: '9px', padding: '11px 14px', backgroundColor: '#f3e0da', color: '#9c2b1f', border: '1px solid #e6c4b8', borderRadius: '10px', marginBottom: '16px', fontSize: '13.5px', fontWeight: 500 };
+const tableWrapStyle = { marginBottom: '20px', maxHeight: '360px', overflowY: 'auto', border: '1px solid #e6ded0', borderRadius: '12px' };
+const thStyle = { padding: '11px 14px', backgroundColor: '#f5f0e6', color: '#8c8172', fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e6ded0', position: 'sticky', top: 0 };
+const tdStyle = { padding: '12px 14px', color: '#4a4038' };
+const inputNumberStyle = { width: '86px', padding: '8px', borderRadius: '9px', border: '1px solid #e6ded0', textAlign: 'center', fontSize: '14px', fontWeight: 700, fontFamily: FONT, color: '#211c17', outline: 'none' };
+const footerStyle = { display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #f1ebe0', paddingTop: '16px' };
+const buttonCancelStyle = { padding: '10px 16px', borderRadius: '9px', border: '1px solid #e6ded0', backgroundColor: '#fffdf9', color: '#4a4038', cursor: 'pointer', fontWeight: 600, fontFamily: FONT, fontSize: '14px' };
+const buttonSubmitStyle = { display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '10px 18px', borderRadius: '9px', border: 'none', backgroundColor: '#3f6b1f', color: '#fffdf9', cursor: 'pointer', fontWeight: 700, fontFamily: FONT, fontSize: '14px' };

@@ -9,6 +9,7 @@ import {
   updateProducto,
   getProductosPorProveedor
 } from '../services/api';
+import { IconBuilding, IconTag, IconEdit, IconPlus } from './Icon';
 
 export function GestionCatalogos() {
   const [subTab, setSubTab] = useState('PROVEEDORES'); // 'PROVEEDORES' | 'PRODUCTOS'
@@ -147,51 +148,35 @@ export function GestionCatalogos() {
   };
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ fontFamily: FONT }}>
       {/* Sub-Pestañas */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+      <div style={subTabsStyle}>
         <button
           onClick={() => setSubTab('PROVEEDORES')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '6px',
-            border: '1px solid #d1d5db',
-            backgroundColor: subTab === 'PROVEEDORES' ? '#2563eb' : '#ffffff',
-            color: subTab === 'PROVEEDORES' ? '#ffffff' : '#374151',
-            fontWeight: '600',
-            cursor: 'pointer'
-          }}
+          style={subTab === 'PROVEEDORES' ? subTabActiveStyle : subTabStyle}
         >
-          🏢 Proveedores ({proveedores.length})
+          <IconBuilding size={16} /> Proveedores <span style={countBadge(subTab === 'PROVEEDORES')}>{proveedores.length}</span>
         </button>
 
         <button
           onClick={() => setSubTab('PRODUCTOS')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '6px',
-            border: '1px solid #d1d5db',
-            backgroundColor: subTab === 'PRODUCTOS' ? '#2563eb' : '#ffffff',
-            color: subTab === 'PRODUCTOS' ? '#ffffff' : '#374151',
-            fontWeight: '600',
-            cursor: 'pointer'
-          }}
+          style={subTab === 'PRODUCTOS' ? subTabActiveStyle : subTabStyle}
         >
-          🏷️ Productos / SKUs ({productos.length})
+          <IconTag size={16} /> Productos / SKUs <span style={countBadge(subTab === 'PRODUCTOS')}>{productos.length}</span>
         </button>
       </div>
 
-      {loading && <p style={{ color: '#6b7280' }}>Cargando catálogo...</p>}
-      {error && <div style={{ color: '#dc2626', marginBottom: '16px' }}>{error}</div>}
+      {loading && <p style={{ color: '#8c8172', fontSize: '14px' }}>Cargando catálogo...</p>}
+      {error && <div style={{ color: '#9c2b1f', marginBottom: '16px', fontSize: '14px' }}>{error}</div>}
 
       {!loading && subTab === 'PROVEEDORES' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
+        <div style={splitLayoutStyle}>
           {/* Formulario Proveedor */}
           <form onSubmit={handleSaveProveedor} style={cardStyle}>
-            <h3 style={{ marginTop: 0, color: '#111827' }}>
-              {editingProv ? '✏️ Editar Proveedor' : '➕ Nuevo Proveedor'}
+            <h3 style={formTitleStyle}>
+              {editingProv ? <><IconEdit size={16} /> Editar Proveedor</> : <><IconPlus size={16} /> Nuevo Proveedor</>}
             </h3>
-            
+
             <div style={fieldStyle}>
               <label style={labelStyle}>Nombre / Razón Social *</label>
               <input
@@ -241,18 +226,19 @@ export function GestionCatalogos() {
             {/* Selector de Insumos/Productos que provee */}
             <div style={fieldStyle}>
               <label style={labelStyle}>Productos / Insumos que Provee</label>
-              <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #d1d5db', borderRadius: '6px', padding: '8px', backgroundColor: '#f9fafb' }}>
+              <div style={checkListStyle}>
                 {productos.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>No hay productos cargados en el catálogo.</p>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#8c8172' }}>No hay productos cargados en el catálogo.</p>
                 ) : (
                   productos.map(prod => (
-                    <label key={prod.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', marginBottom: '6px', cursor: 'pointer', color: '#374151' }}>
+                    <label key={prod.id} style={checkItemStyle}>
                       <input
                         type="checkbox"
                         checked={provProductos.includes(prod.id)}
                         onChange={() => handleToggleProdSelection(prod.id)}
+                        style={{ accentColor: '#c2660a' }}
                       />
-                      <span><strong style={{ color: '#2563eb' }}>{prod.sku}</strong> - {prod.descripcion}</span>
+                      <span><strong style={{ color: '#9a4508' }}>{prod.sku}</strong> — {prod.descripcion}</span>
                     </label>
                   ))
                 )}
@@ -273,25 +259,27 @@ export function GestionCatalogos() {
 
           {/* Tabla Proveedores */}
           <div style={tableContainerStyle}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+            <table style={tableStyle}>
               <thead>
-                <tr style={thRowStyle}>
-                  <th style={{ padding: '10px' }}>Nombre</th>
-                  <th style={{ padding: '10px' }}>CUIT</th>
-                  <th style={{ padding: '10px' }}>Email</th>
-                  <th style={{ padding: '10px' }}>Teléfono</th>
-                  <th style={{ padding: '10px', textAlign: 'center' }}>Acción</th>
+                <tr>
+                  <th style={thStyle}>Nombre</th>
+                  <th style={thStyle}>CUIT</th>
+                  <th style={thStyle}>Email</th>
+                  <th style={thStyle}>Teléfono</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {proveedores.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: '10px', fontWeight: '600' }}>{p.nombre || p.razon_social}</td>
-                    <td style={{ padding: '10px', color: '#4b5563' }}>{p.cuit || '-'}</td>
-                    <td style={{ padding: '10px', color: '#4b5563' }}>{p.email_contacto || p.email}</td>
-                    <td style={{ padding: '10px', color: '#4b5563' }}>{p.telefono || '-'}</td>
-                    <td style={{ padding: '10px', textAlign: 'center' }}>
-                      <button onClick={() => handleEditProvClick(p)} style={btnSmallStyle}>✏️</button>
+                  <tr key={p.id} style={trStyle}>
+                    <td style={{ ...tdStyle, fontWeight: 600, color: '#211c17' }}>{p.nombre || p.razon_social}</td>
+                    <td style={{ ...tdStyle, fontVariantNumeric: 'tabular-nums' }}>{p.cuit || '—'}</td>
+                    <td style={tdStyle}>{p.email_contacto || p.email}</td>
+                    <td style={tdStyle}>{p.telefono || '—'}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                      <button onClick={() => handleEditProvClick(p)} style={btnSmallStyle} title="Editar">
+                        <IconEdit size={15} />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -302,11 +290,11 @@ export function GestionCatalogos() {
       )}
 
       {!loading && subTab === 'PRODUCTOS' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
+        <div style={splitLayoutStyle}>
           {/* Formulario Producto */}
           <form onSubmit={handleSaveProducto} style={cardStyle}>
-            <h3 style={{ marginTop: 0, color: '#111827' }}>
-              {editingProd ? '✏️ Editar Producto' : '➕ Nuevo Producto'}
+            <h3 style={formTitleStyle}>
+              {editingProd ? <><IconEdit size={16} /> Editar Producto</> : <><IconPlus size={16} /> Nuevo Producto</>}
             </h3>
             <div style={fieldStyle}>
               <label style={labelStyle}>Código / SKU *</label>
@@ -357,23 +345,25 @@ export function GestionCatalogos() {
 
           {/* Tabla Productos */}
           <div style={tableContainerStyle}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+            <table style={tableStyle}>
               <thead>
-                <tr style={thRowStyle}>
-                  <th style={{ padding: '10px' }}>SKU</th>
-                  <th style={{ padding: '10px' }}>Descripción</th>
-                  <th style={{ padding: '10px' }}>Unidad</th>
-                  <th style={{ padding: '10px', textAlign: 'center' }}>Acción</th>
+                <tr>
+                  <th style={thStyle}>SKU</th>
+                  <th style={thStyle}>Descripción</th>
+                  <th style={thStyle}>Unidad</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {productos.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: '10px', fontWeight: '700', color: '#2563eb' }}>{p.sku}</td>
-                    <td style={{ padding: '10px' }}>{p.descripcion}</td>
-                    <td style={{ padding: '10px', color: '#6b7280' }}>{p.unidad_medida || 'UNIDAD'}</td>
-                    <td style={{ padding: '10px', textAlign: 'center' }}>
-                      <button onClick={() => handleEditProdClick(p)} style={btnSmallStyle}>✏️</button>
+                  <tr key={p.id} style={trStyle}>
+                    <td style={{ ...tdStyle, fontWeight: 700, color: '#9a4508', fontVariantNumeric: 'tabular-nums' }}>{p.sku}</td>
+                    <td style={{ ...tdStyle, color: '#211c17' }}>{p.descripcion}</td>
+                    <td style={{ ...tdStyle, color: '#8c8172' }}>{p.unidad_medida || 'UNIDAD'}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                      <button onClick={() => handleEditProdClick(p)} style={btnSmallStyle} title="Editar">
+                        <IconEdit size={15} />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -387,12 +377,24 @@ export function GestionCatalogos() {
 }
 
 // Estilos aislados
-const cardStyle = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' };
-const tableContainerStyle = { backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' };
-const thRowStyle = { backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', color: '#374151', fontSize: '12px', textTransform: 'uppercase' };
-const fieldStyle = { marginBottom: '12px' };
-const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '4px' };
-const inputStyle = { width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', fontSize: '14px' };
-const btnPrimaryStyle = { backgroundColor: '#16a34a', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' };
-const btnSecondaryStyle = { backgroundColor: '#ffffff', color: '#374151', border: '1px solid #d1d5db', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' };
-const btnSmallStyle = { backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' };
+const FONT = "'Inter', system-ui, sans-serif";
+const subTabsStyle = { display: 'flex', gap: '6px', marginBottom: '22px', background: '#fffdf9', border: '1px solid #e6ded0', borderRadius: '11px', padding: '6px', width: 'fit-content', boxShadow: '0 1px 2px rgba(16,18,22,0.05)' };
+const subTabStyle = { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 14px', borderRadius: '8px', border: 'none', backgroundColor: 'transparent', color: '#8c8172', fontWeight: 600, fontSize: '13.5px', cursor: 'pointer', fontFamily: FONT };
+const subTabActiveStyle = { ...subTabStyle, backgroundColor: '#211c17', color: '#fffdf9' };
+const countBadge = (active) => ({ display: 'inline-grid', placeItems: 'center', minWidth: '20px', height: '20px', padding: '0 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, backgroundColor: active ? '#c2660a' : '#f1ebe0', color: active ? '#fffdf9' : '#8c8172' });
+const splitLayoutStyle = { display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(0, 2fr)', gap: '20px', alignItems: 'start' };
+const cardStyle = { backgroundColor: '#fffdf9', border: '1px solid #e6ded0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 2px rgba(16,18,22,0.05)' };
+const formTitleStyle = { display: 'flex', alignItems: 'center', gap: '8px', marginTop: 0, marginBottom: '16px', color: '#211c17', fontSize: '15px', fontWeight: 700 };
+const tableContainerStyle = { backgroundColor: '#fffdf9', border: '1px solid #e6ded0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(16,18,22,0.05)' };
+const tableStyle = { width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' };
+const thStyle = { padding: '12px 14px', backgroundColor: '#f5f0e6', color: '#8c8172', fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e6ded0' };
+const trStyle = { borderBottom: '1px solid #f1ebe0' };
+const tdStyle = { padding: '12px 14px', color: '#4a4038' };
+const fieldStyle = { marginBottom: '13px' };
+const labelStyle = { display: 'block', fontSize: '13px', fontWeight: 600, color: '#4a4038', marginBottom: '5px' };
+const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: '9px', border: '1px solid #e6ded0', boxSizing: 'border-box', fontSize: '14px', fontFamily: FONT, color: '#211c17', backgroundColor: '#fffdf9', outline: 'none' };
+const checkListStyle = { maxHeight: '170px', overflowY: 'auto', border: '1px solid #e6ded0', borderRadius: '9px', padding: '10px', backgroundColor: '#faf2e2' };
+const checkItemStyle = { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', marginBottom: '7px', cursor: 'pointer', color: '#4a4038' };
+const btnPrimaryStyle = { display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#211c17', color: '#fffdf9', border: 'none', padding: '10px 16px', borderRadius: '9px', cursor: 'pointer', fontWeight: 700, fontFamily: FONT, fontSize: '14px' };
+const btnSecondaryStyle = { backgroundColor: '#fffdf9', color: '#4a4038', border: '1px solid #e6ded0', padding: '10px 16px', borderRadius: '9px', cursor: 'pointer', fontWeight: 600, fontFamily: FONT, fontSize: '14px' };
+const btnSmallStyle = { display: 'inline-grid', placeItems: 'center', width: '32px', height: '32px', backgroundColor: '#f1ebe0', border: '1px solid #e6ded0', borderRadius: '8px', cursor: 'pointer', color: '#4a4038' };

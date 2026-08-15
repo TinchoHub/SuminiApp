@@ -1,6 +1,10 @@
 // frontend/src/components/VistaCalendario.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { getTurnosCalendario } from '../services/api';
+import {
+  IconChevronLeft, IconChevronRight, IconCalendar, IconRefresh,
+  IconSearch, IconClose, IconClock, IconTruck, IconAlert
+} from './Icon';
 
 export function VistaCalendario() {
   const [turnos, setTurnos] = useState([]);
@@ -111,75 +115,50 @@ export function VistaCalendario() {
   };
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ fontFamily: FONT }}>
       {/* Controles Superiores: Navegación de Semana y Filtro */}
-      <div
-        style={{
-          display: 'flex',
-          justify: 'space-between',
-          alignItems: 'center',
-          marginBottom: '20px',
-          backgroundColor: '#f9fafb',
-          padding: '16px',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={handlePrevWeek} style={buttonNavStyle}>
-            ◀ Semana Ant.
+      <div style={toolbarStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button onClick={handlePrevWeek} style={navBtnStyle} title="Semana anterior">
+            <IconChevronLeft size={16} />
           </button>
-          <button onClick={handleToday} style={buttonTodayStyle}>
-            📅 Hoy
+          <button onClick={handleToday} style={todayBtnStyle}>
+            <IconCalendar size={15} /> Hoy
           </button>
-          <button onClick={handleNextWeek} style={buttonNavStyle}>
-            Semana Sig. ▶
+          <button onClick={handleNextWeek} style={navBtnStyle} title="Semana siguiente">
+            <IconChevronRight size={16} />
           </button>
-          <span style={{ fontWeight: '700', fontSize: '15px', marginLeft: '10px', color: '#111827' }}>
+          <span style={weekRangeStyle}>
             {getNombresDia(weekDays[0])} — {getNombresDia(weekDays[6])}
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="🔍 Patente, OC o Proveedor..."
-            value={filtroTexto}
-            onChange={(e) => setFiltroTexto(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              borderRadius: '6px',
-              border: '1px solid #d1d5db',
-              fontSize: '13px',
-              width: '220px'
-            }}
-          />
-          <button onClick={fetchTurnos} style={buttonNavStyle}>
-            🔄
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <span style={searchIconStyle}><IconSearch size={16} /></span>
+            <input
+              type="text"
+              placeholder="Patente, OC o Proveedor..."
+              value={filtroTexto}
+              onChange={(e) => setFiltroTexto(e.target.value)}
+              style={searchInputStyle}
+            />
+          </div>
+          <button onClick={fetchTurnos} style={navBtnStyle} title="Actualizar">
+            <IconRefresh size={16} />
           </button>
         </div>
       </div>
 
-      {loading && <p style={{ color: '#6b7280' }}>Cargando grilla de turnos...</p>}
+      {loading && <p style={loadingStyle}>Cargando grilla de turnos...</p>}
 
       {error && (
-        <div style={{ padding: '12px 16px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '6px', marginBottom: '20px' }}>
-          {error}
-        </div>
+        <div style={errorStyle}><IconAlert size={16} /><span>{error}</span></div>
       )}
 
       {/* Grilla Semanal (7 Columnas) */}
       {!loading && !error && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, 1fr)',
-            gap: '10px',
-            alignItems: 'start'
-          }}
-        >
+        <div style={gridStyle}>
           {weekDays.map((dayDate) => {
             const dateStr = formatDateISO(dayDate);
             const turnosDelDia = turnosPorFecha[dateStr] || [];
@@ -189,35 +168,38 @@ export function VistaCalendario() {
               <div
                 key={dateStr}
                 style={{
-                  backgroundColor: hoyFlag ? '#f0f9ff' : '#ffffff',
-                  border: hoyFlag ? '2px solid #0284c7' : '1px solid #e5e7eb',
-                  borderRadius: '8px',
+                  backgroundColor: '#fffdf9',
+                  border: hoyFlag ? '1.5px solid #c2660a' : '1px solid #e6ded0',
+                  borderRadius: '12px',
                   minHeight: '380px',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  boxShadow: hoyFlag ? '0 4px 16px rgba(217,119,6,0.12)' : '0 1px 2px rgba(16,18,22,0.05)',
                   overflow: 'hidden'
                 }}
               >
                 {/* Encabezado del Día */}
                 <div
                   style={{
-                    backgroundColor: hoyFlag ? '#0284c7' : '#f3f4f6',
-                    color: hoyFlag ? '#ffffff' : '#374151',
-                    padding: '8px 10px',
+                    backgroundColor: hoyFlag ? '#211c17' : '#f5f0e6',
+                    color: hoyFlag ? '#fffdf9' : '#4a4038',
+                    padding: '10px',
                     textAlign: 'center',
-                    fontWeight: '700',
-                    fontSize: '13px',
-                    textTransform: 'capitalize'
+                    fontWeight: 700,
+                    fontSize: '12.5px',
+                    textTransform: 'capitalize',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
                   }}
                 >
+                  {hoyFlag && <span style={{ color: '#c2660a' }}>●</span>}
                   {getNombresDia(dayDate)}
                 </div>
 
                 {/* Lista de Turnos en la Columna */}
                 <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {turnosDelDia.length === 0 ? (
-                    <span style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic', textAlign: 'center', display: 'block', marginTop: '12px' }}>
-                      Sin turnos
-                    </span>
+                    <span style={emptyDayStyle}>Sin turnos</span>
                   ) : (
                     turnosDelDia.map((t) => {
                       const ocNum = t.ordenes_compra?.numero_oc || 'OC N/A';
@@ -226,14 +208,14 @@ export function VistaCalendario() {
                       const estado = t.estado || 'SOLICITADO';
 
                       // Color del borde según estado del turno
-                      let borderColor = '#3b82f6';
-                      let bgColor = '#eff6ff';
+                      let borderColor = '#c2660a';
+                      let bgColor = '#f6e6d0';
                       if (estado === 'CONFIRMADO') {
-                        borderColor = '#16a34a';
-                        bgColor = '#f0fdf4';
+                        borderColor = '#3f6b1f';
+                        bgColor = '#e9ecdd';
                       } else if (estado === 'COMPLETADO') {
-                        borderColor = '#059669';
-                        bgColor = '#ecfdf5';
+                        borderColor = '#2d5016';
+                        bgColor = '#e9ecdd';
                       }
 
                       return (
@@ -242,23 +224,25 @@ export function VistaCalendario() {
                           onClick={() => setSelectedTurno(t)}
                           style={{
                             backgroundColor: bgColor,
-                            borderLeft: `4px solid ${borderColor}`,
-                            borderRadius: '6px',
-                            padding: '8px',
+                            borderLeft: `3px solid ${borderColor}`,
+                            border: `1px solid ${borderColor}22`,
+                            borderLeftWidth: '3px',
+                            borderRadius: '8px',
+                            padding: '9px',
                             cursor: 'pointer',
-                            fontSize: '12px',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                            transition: 'transform 0.1s'
+                            fontSize: '12px'
                           }}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', color: '#1f2937' }}>
-                            <span>⏰ {hora} hs</span>
-                            <span style={{ color: '#2563eb' }}>{t.patente_vehiculo}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, color: '#211c17' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontVariantNumeric: 'tabular-nums' }}>
+                              <IconClock size={12} /> {hora}
+                            </span>
+                            <span style={{ color: '#9a4508', fontFamily: 'monospace', fontSize: '11.5px' }}>{t.patente_vehiculo}</span>
                           </div>
-                          <div style={{ fontWeight: '600', marginTop: '4px', color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontWeight: 600, marginTop: '5px', color: '#4a4038', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {provNom}
                           </div>
-                          <div style={{ color: '#6b7280', fontSize: '11px', marginTop: '2px' }}>
+                          <div style={{ color: '#8c8172', fontSize: '11px', marginTop: '2px' }}>
                             {ocNum}
                           </div>
                         </div>
@@ -274,24 +258,30 @@ export function VistaCalendario() {
 
       {/* Modal / Detalle del Turno al hacer Clic */}
       {selectedTurno && (
-        <div style={overlayStyle}>
+        <div style={overlayStyle} onMouseDown={(e) => e.target === e.currentTarget && setSelectedTurno(null)}>
           <div style={modalStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f3f4f6', paddingBottom: '10px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>🚛 Detalle del Turno Agendado</h3>
-              <button onClick={() => setSelectedTurno(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9ca3af' }}>✕</button>
+            <div style={modalHeaderStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+                <span style={titleIconStyle}><IconTruck size={18} /></span>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#211c17', fontWeight: 800 }}>Detalle del Turno</h3>
+              </div>
+              <button onClick={() => setSelectedTurno(null)} style={closeButtonStyle} aria-label="Cerrar"><IconClose size={18} /></button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px', color: '#374151' }}>
-              <div><strong>📅 Fecha y Hora:</strong> {selectedTurno.fecha_turno} a las {selectedTurno.hora_inicio?.slice(0, 5)} hs</div>
-              <div><strong>🚘 Patente Vehículo:</strong> <span style={{ fontFamily: 'monospace', fontSize: '15px', fontWeight: '700', backgroundColor: '#f3f4f6', padding: '2px 6px', borderRadius: '4px' }}>{selectedTurno.patente_vehiculo}</span></div>
-              <div><strong>📄 Orden de Compra:</strong> {selectedTurno.ordenes_compra?.numero_oc || 'N/A'}</div>
-              <div><strong>🏢 Proveedor:</strong> {selectedTurno.ordenes_compra?.proveedores?.nombre || 'N/A'}</div>
-              <div><strong>👤 Datos Chofer:</strong> {selectedTurno.datos_chofer || 'Sin registrar'}</div>
-              <div><strong>📌 Estado:</strong> <span style={{ fontWeight: '700', color: '#2563eb' }}>{selectedTurno.estado}</span></div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <DetalleFila label="Fecha y Hora" valor={`${selectedTurno.fecha_turno} · ${selectedTurno.hora_inicio?.slice(0, 5)} hs`} />
+              <DetalleFila
+                label="Patente Vehículo"
+                valor={<span style={patenteStyle}>{selectedTurno.patente_vehiculo}</span>}
+              />
+              <DetalleFila label="Orden de Compra" valor={selectedTurno.ordenes_compra?.numero_oc || 'N/A'} />
+              <DetalleFila label="Proveedor" valor={selectedTurno.ordenes_compra?.proveedores?.nombre || 'N/A'} />
+              <DetalleFila label="Datos Chofer" valor={selectedTurno.datos_chofer || 'Sin registrar'} />
+              <DetalleFila label="Estado" valor={<span style={{ fontWeight: 700, color: '#9a4508' }}>{selectedTurno.estado}</span>} />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <button onClick={() => setSelectedTurno(null)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#ffffff', cursor: 'pointer', fontWeight: '600' }}>
+              <button onClick={() => setSelectedTurno(null)} style={buttonCancelStyle}>
                 Cerrar
               </button>
             </div>
@@ -302,47 +292,30 @@ export function VistaCalendario() {
   );
 }
 
-// Estilos
-const buttonNavStyle = {
-  padding: '6px 12px',
-  borderRadius: '6px',
-  border: '1px solid #d1d5db',
-  backgroundColor: '#ffffff',
-  color: '#374151',
-  cursor: 'pointer',
-  fontSize: '13px',
-  fontWeight: '600'
-};
+function DetalleFila({ label, valor }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', padding: '11px 0', borderBottom: '1px solid #f1ebe0', fontSize: '14px' }}>
+      <span style={{ color: '#8c8172', fontWeight: 500 }}>{label}</span>
+      <span style={{ color: '#211c17', fontWeight: 600, textAlign: 'right' }}>{valor}</span>
+    </div>
+  );
+}
 
-const buttonTodayStyle = {
-  padding: '6px 12px',
-  borderRadius: '6px',
-  border: '1px solid #2563eb',
-  backgroundColor: '#2563eb',
-  color: '#ffffff',
-  cursor: 'pointer',
-  fontSize: '13px',
-  fontWeight: '600'
-};
-
-const overlayStyle = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0,0,0,0.5)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 1000
-};
-
-const modalStyle = {
-  backgroundColor: '#ffffff',
-  borderRadius: '8px',
-  width: '100%',
-  maxWidth: '450px',
-  padding: '20px',
-  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
-};
+const FONT = "'Inter', system-ui, sans-serif";
+const toolbarStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', backgroundColor: '#fffdf9', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e6ded0', boxShadow: '0 1px 2px rgba(16,18,22,0.05)', flexWrap: 'wrap', gap: '12px' };
+const navBtnStyle = { display: 'grid', placeItems: 'center', width: '36px', height: '36px', borderRadius: '9px', border: '1px solid #e6ded0', backgroundColor: '#fffdf9', color: '#4a4038', cursor: 'pointer' };
+const todayBtnStyle = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '9px', border: 'none', backgroundColor: '#211c17', color: '#fffdf9', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: FONT };
+const weekRangeStyle = { fontWeight: 700, fontSize: '14px', marginLeft: '8px', color: '#211c17', textTransform: 'capitalize' };
+const searchIconStyle = { position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', color: '#a89d8a', display: 'flex', pointerEvents: 'none' };
+const searchInputStyle = { padding: '9px 12px 9px 34px', borderRadius: '9px', border: '1px solid #e6ded0', fontSize: '13px', width: '230px', fontFamily: FONT, color: '#211c17', outline: 'none', boxSizing: 'border-box' };
+const loadingStyle = { color: '#8c8172', fontSize: '14px' };
+const errorStyle = { display: 'flex', alignItems: 'center', gap: '9px', padding: '12px 16px', backgroundColor: '#f3e0da', color: '#9c2b1f', border: '1px solid #e6c4b8', borderRadius: '10px', marginBottom: '20px', fontSize: '13.5px', fontWeight: 500 };
+const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', alignItems: 'start' };
+const emptyDayStyle = { fontSize: '12px', color: '#b6a996', fontStyle: 'italic', textAlign: 'center', display: 'block', marginTop: '14px' };
+const overlayStyle = { position: 'fixed', inset: 0, backgroundColor: 'rgba(16,18,22,0.55)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '16px' };
+const modalStyle = { backgroundColor: '#fffdf9', borderRadius: '10px', width: '100%', maxWidth: '460px', padding: '24px', boxShadow: '0 24px 60px rgba(16,18,22,0.28)', fontFamily: FONT, border: '1px solid #e6ded0' };
+const modalHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1ebe0', paddingBottom: '14px' };
+const titleIconStyle = { width: '34px', height: '34px', borderRadius: '9px', backgroundColor: '#f6e6d0', color: '#9a4508', display: 'grid', placeItems: 'center' };
+const closeButtonStyle = { display: 'grid', placeItems: 'center', width: '32px', height: '32px', background: '#f1ebe0', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#8c8172' };
+const patenteStyle = { fontFamily: 'monospace', fontSize: '15px', fontWeight: 700, backgroundColor: '#f1ebe0', color: '#211c17', padding: '3px 8px', borderRadius: '6px' };
+const buttonCancelStyle = { padding: '10px 18px', borderRadius: '9px', border: '1px solid #e6ded0', backgroundColor: '#fffdf9', color: '#4a4038', cursor: 'pointer', fontWeight: 600, fontFamily: FONT, fontSize: '14px' };

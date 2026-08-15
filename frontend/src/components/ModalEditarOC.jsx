@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { getProductosPorProveedor, updateOrdenCompra, deleteOrdenCompra } from '../services/api';
 import { EstadoBadge } from './EstadoBadge';
 import { BuscadorProducto } from './BuscadorProducto';
+import { IconEdit, IconClose, IconPlus, IconTrash, IconLock, IconPackage, IconAlert, IconSave } from './Icon';
 
 export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
   const [productosCat, setProductosCat] = useState([]);
@@ -188,27 +189,28 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
   };
 
   return (
-    <div style={overlayStyle}>
+    <div style={overlayStyle} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div style={modalStyle}>
         <div style={headerStyle}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h2 style={{ margin: 0, color: '#111827', fontSize: '20px' }}>
-                ✏️ Detalle y Edición: {oc.numero_oc}
-              </h2>
-              <EstadoBadge estado={oc.estado} />
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '11px' }}>
+            <span style={titleIconStyle}><IconEdit size={18} /></span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <h2 style={titleStyle}>{oc.numero_oc}</h2>
+                <EstadoBadge estado={oc.estado} />
+              </div>
+              <p style={subtitleStyle}>
+                Proveedor: <strong style={{ color: '#211c17' }}>{oc.proveedores?.nombre || oc.proveedores?.razon_social || 'N/A'}</strong>
+              </p>
             </div>
-            <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '13px' }}>
-              Proveedor: <strong>{oc.proveedores?.nombre || oc.proveedores?.razon_social || 'N/A'}</strong>
-            </p>
           </div>
-          <button onClick={onClose} style={closeButtonStyle}>✕</button>
+          <button onClick={onClose} style={closeButtonStyle} aria-label="Cerrar"><IconClose size={18} /></button>
         </div>
 
-        {error && <div style={errorStyle}>{error}</div>}
+        {error && <div style={errorStyle}><IconAlert size={16} /><span>{error}</span></div>}
 
         {loadingCat ? (
-          <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>Cargando productos del proveedor...</p>
+          <p style={loadingStyle}>Cargando productos del proveedor...</p>
         ) : (
           <form onSubmit={handleSubmit}>
             <div style={rowStyle}>
@@ -245,26 +247,27 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
               />
             </div>
 
-            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '18px 0' }} />
+            <hr style={dividerStyle} />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, fontSize: '15px', color: '#374151' }}>📦 Detalle de Insumos / Productos</h3>
+            <div style={sectionHeadStyle}>
+              <h3 style={sectionTitleStyle}><IconPackage size={16} /> Detalle de Insumos / Productos</h3>
               <button
                 type="button"
                 onClick={handleAddItem}
                 disabled={productosCat.length === 0}
-                style={buttonAddStyle}
+                style={{ ...buttonAddStyle, opacity: productosCat.length === 0 ? 0.5 : 1 }}
               >
-                ➕ Agregar Producto
+                <IconPlus size={15} /> Agregar Producto
               </button>
             </div>
 
             {productosCat.length === 0 ? (
               <div style={warningBoxStyle}>
-                ⚠️ Este proveedor no tiene productos vinculados en el catálogo.
+                <IconAlert size={16} />
+                <span>Este proveedor no tiene productos vinculados en el catálogo.</span>
               </div>
             ) : (
-              <div style={{ marginBottom: '20px', maxHeight: '250px', overflowY: 'visible' }}>
+              <div style={{ marginBottom: '20px' }}>
                 {items.map((item, index) => {
                   const yaRecibido = Number(item.cantidad_recibida || 0);
 
@@ -280,7 +283,7 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
                         />
                       </div>
 
-                      <div style={{ width: '110px' }}>
+                      <div style={{ width: '104px' }}>
                         <label style={{ ...labelStyle, fontSize: '12px' }}>Cant. Pedida</label>
                         <input
                           type="number"
@@ -292,17 +295,18 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
                         />
                       </div>
 
-                      <div style={{ width: '90px', textAlign: 'center' }}>
+                      <div style={{ width: '82px', textAlign: 'center' }}>
                         <label style={{ ...labelStyle, fontSize: '12px' }}>Recibido</label>
                         <span
                           style={{
                             display: 'inline-block',
-                            padding: '6px 10px',
-                            borderRadius: '6px',
-                            backgroundColor: yaRecibido > 0 ? '#dcfce7' : '#f3f4f6',
-                            color: yaRecibido > 0 ? '#15803d' : '#6b7280',
-                            fontWeight: '700',
-                            fontSize: '13px'
+                            padding: '7px 10px',
+                            borderRadius: '9px',
+                            backgroundColor: yaRecibido > 0 ? '#e9ecdd' : '#f1ebe0',
+                            color: yaRecibido > 0 ? '#3f6b1f' : '#8c8172',
+                            fontWeight: 700,
+                            fontSize: '13px',
+                            fontVariantNumeric: 'tabular-nums'
                           }}
                         >
                           {yaRecibido}
@@ -316,10 +320,12 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
                           style={buttonRemoveStyle}
                           title="Eliminar renglón"
                         >
-                          🗑️
+                          <IconTrash size={16} />
                         </button>
                       ) : (
-                        <div style={{ width: '30px' }} title="Bloqueado por recepciones previas">🔒</div>
+                        <div style={lockStyle} title="Bloqueado por recepciones previas">
+                          <IconLock size={15} />
+                        </div>
                       )}
                     </div>
                   );
@@ -335,11 +341,12 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
                 disabled={submitting || deleting}
                 style={buttonDeleteStyle}
               >
-                {deleting ? 'Eliminando...' : '🗑️ Eliminar Orden'}
+                <IconTrash size={15} />
+                {deleting ? 'Eliminando...' : 'Eliminar Orden'}
               </button>
 
               {/* Botones de acción a la derecha */}
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   type="button"
                   onClick={onClose}
@@ -351,9 +358,10 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
                 <button
                   type="submit"
                   disabled={submitting || deleting || productosCat.length === 0}
-                  style={buttonSubmitStyle}
+                  style={{ ...buttonSubmitStyle, opacity: (submitting || deleting || productosCat.length === 0) ? 0.6 : 1 }}
                 >
-                  {submitting ? 'Guardando...' : '💾 Guardar Cambios'}
+                  <IconSave size={16} />
+                  {submitting ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>
             </div>
@@ -364,22 +372,29 @@ export function ModalEditarOC({ isOpen, onClose, oc, onOCUpdated }) {
   );
 }
 
-const overlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '16px' };
-const modalStyle = { backgroundColor: '#ffffff', borderRadius: '8px', width: '100%', maxWidth: '700px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', fontFamily: 'system-ui, sans-serif' };
-const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: '1px solid #f3f4f6', paddingBottom: '12px' };
-const closeButtonStyle = { background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9ca3af' };
-const rowStyle = { display: 'flex', gap: '16px', marginBottom: '12px' };
-const fieldStyle = { flex: 1 };
-const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '4px' };
-const inputStyle = { width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', fontSize: '14px' };
-const errorStyle = { padding: '10px 14px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' };
-const warningBoxStyle = { padding: '12px', backgroundColor: '#fef3c7', color: '#92400e', borderRadius: '6px', fontSize: '13px', marginBottom: '16px' };
-const itemRowStyle = { display: 'flex', gap: '12px', alignItems: 'center', backgroundColor: '#f9fafb', padding: '10px', borderRadius: '6px', marginBottom: '8px', border: '1px solid #f3f4f6' };
-const buttonAddStyle = { padding: '6px 12px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#ffffff', color: '#2563eb', fontSize: '13px', fontWeight: '600', cursor: 'pointer' };
-const buttonRemoveStyle = { background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', padding: '6px' };
-
-// Footer con layout 'space-between'
-const footerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f3f4f6', paddingTop: '16px', marginTop: '12px' };
-const buttonDeleteStyle = { padding: '8px 16px', borderRadius: '6px', border: '1px solid #fca5a5', backgroundColor: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontWeight: '600', fontSize: '14px' };
-const buttonCancelStyle = { padding: '8px 16px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#ffffff', color: '#374151', cursor: 'pointer', fontWeight: '600' };
-const buttonSubmitStyle = { padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: '#2563eb', color: '#ffffff', cursor: 'pointer', fontWeight: '600' };
+const FONT = "'Inter', system-ui, sans-serif";
+const overlayStyle = { position: 'fixed', inset: 0, backgroundColor: 'rgba(16,18,22,0.55)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '16px' };
+const modalStyle = { backgroundColor: '#fffdf9', borderRadius: '10px', width: '100%', maxWidth: '720px', maxHeight: '92vh', overflowY: 'auto', padding: '24px', boxShadow: '0 24px 60px rgba(16,18,22,0.28)', fontFamily: FONT, border: '1px solid #e6ded0' };
+const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', borderBottom: '1px solid #f1ebe0', paddingBottom: '14px' };
+const titleIconStyle = { width: '34px', height: '34px', borderRadius: '9px', backgroundColor: '#f6e6d0', color: '#9a4508', display: 'grid', placeItems: 'center', flexShrink: 0 };
+const titleStyle = { margin: 0, color: '#211c17', fontSize: '19px', fontWeight: 800, letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums' };
+const subtitleStyle = { margin: '5px 0 0', color: '#8c8172', fontSize: '13px' };
+const closeButtonStyle = { display: 'grid', placeItems: 'center', width: '32px', height: '32px', background: '#f1ebe0', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#8c8172', flexShrink: 0 };
+const loadingStyle = { textAlign: 'center', color: '#8c8172', padding: '20px', fontSize: '14px' };
+const rowStyle = { display: 'flex', gap: '16px', marginBottom: '12px', flexWrap: 'wrap' };
+const fieldStyle = { flex: 1, minWidth: '200px' };
+const labelStyle = { display: 'block', fontSize: '13px', fontWeight: 600, color: '#4a4038', marginBottom: '5px' };
+const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: '9px', border: '1px solid #e6ded0', boxSizing: 'border-box', fontSize: '14px', fontFamily: FONT, color: '#211c17', backgroundColor: '#fffdf9', outline: 'none' };
+const errorStyle = { display: 'flex', alignItems: 'center', gap: '9px', padding: '11px 14px', backgroundColor: '#f3e0da', color: '#9c2b1f', border: '1px solid #e6c4b8', borderRadius: '10px', marginBottom: '16px', fontSize: '13.5px', fontWeight: 500 };
+const dividerStyle = { border: 'none', borderTop: '1px solid #f1ebe0', margin: '18px 0' };
+const sectionHeadStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '12px', flexWrap: 'wrap' };
+const sectionTitleStyle = { display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '14px', fontWeight: 700, color: '#211c17' };
+const warningBoxStyle = { display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', backgroundColor: '#f6e6d0', color: '#9a4508', border: '1px solid #ecd3ab', borderRadius: '10px', fontSize: '13px', marginBottom: '16px' };
+const itemRowStyle = { display: 'flex', gap: '12px', alignItems: 'flex-end', backgroundColor: '#faf2e2', padding: '12px', borderRadius: '10px', marginBottom: '8px', border: '1px solid #ecdcc5' };
+const buttonAddStyle = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '9px', border: '1px solid #ecd3ab', backgroundColor: '#f6e6d0', color: '#9a4508', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: FONT };
+const buttonRemoveStyle = { display: 'grid', placeItems: 'center', width: '38px', height: '38px', background: '#f3e0da', border: '1px solid #e6c4b8', borderRadius: '9px', cursor: 'pointer', color: '#9c2b1f', flexShrink: 0 };
+const lockStyle = { display: 'grid', placeItems: 'center', width: '38px', height: '38px', background: '#f1ebe0', borderRadius: '9px', color: '#a89d8a', flexShrink: 0 };
+const footerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1ebe0', paddingTop: '16px', marginTop: '12px', gap: '10px', flexWrap: 'wrap' };
+const buttonDeleteStyle = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '9px', border: '1px solid #e6c4b8', backgroundColor: '#f3e0da', color: '#9c2b1f', cursor: 'pointer', fontWeight: 600, fontFamily: FONT, fontSize: '14px' };
+const buttonCancelStyle = { padding: '10px 16px', borderRadius: '9px', border: '1px solid #e6ded0', backgroundColor: '#fffdf9', color: '#4a4038', cursor: 'pointer', fontWeight: 600, fontFamily: FONT, fontSize: '14px' };
+const buttonSubmitStyle = { display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '10px 18px', borderRadius: '9px', border: 'none', backgroundColor: '#211c17', color: '#fffdf9', cursor: 'pointer', fontWeight: 700, fontFamily: FONT, fontSize: '14px' };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getUsuarios, createUsuario, updateUsuario, deleteUsuario, getRolesYPermisos, createRol, updatePermisosRol } from '../services/api';
+import { IconUser, IconShield, IconEdit, IconTrash, IconPlus, IconSave, IconCheck, IconAlert } from './Icon';
 
 export function UsuariosABM() {
   const [subTab, setSubTab] = useState('USUARIOS'); // 'USUARIOS' | 'ROLES'
@@ -160,36 +161,38 @@ export function UsuariosABM() {
     }
   };
 
-  if (loading) return <p>Cargando administración de acceso...</p>;
+  if (loading) return <p style={{ color: '#8c8172', fontFamily: FONT }}>Cargando administración de acceso...</p>;
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
-      
+    <div style={{ maxWidth: '1040px', margin: '0 auto', fontFamily: FONT }}>
+
       {/* NAVEGACIÓN SECUNDARIA */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', borderBottom: '1px solid #ddd', paddingBottom: '10px' }}>
+      <div style={subTabsStyle}>
         <button
           onClick={() => setSubTab('USUARIOS')}
-          style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 'bold', backgroundColor: subTab === 'USUARIOS' ? '#2563eb' : '#e5e7eb', color: subTab === 'USUARIOS' ? '#fff' : '#374151' }}
+          style={subTab === 'USUARIOS' ? subTabActiveStyle : subTabStyle}
         >
-          👤 Usuarios
+          <IconUser size={16} /> Usuarios
         </button>
         <button
           onClick={() => setSubTab('ROLES')}
-          style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 'bold', backgroundColor: subTab === 'ROLES' ? '#2563eb' : '#e5e7eb', color: subTab === 'ROLES' ? '#fff' : '#374151' }}
+          style={subTab === 'ROLES' ? subTabActiveStyle : subTabStyle}
         >
-          🔐 Roles y Permisos
+          <IconShield size={16} /> Roles y Permisos
         </button>
       </div>
 
-      {mensaje && <div style={{ padding: '10px', backgroundColor: '#dcfce7', color: '#15803d', borderRadius: '6px', marginBottom: '16px' }}>✅ {mensaje}</div>}
-      {error && <div style={{ padding: '10px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '6px', marginBottom: '16px' }}>⚠️ {error}</div>}
+      {mensaje && <div style={alertSuccessStyle}><IconCheck size={16} /><span>{mensaje}</span></div>}
+      {error && <div style={alertErrorStyle}><IconAlert size={16} /><span>{error}</span></div>}
 
       {/* SECCIÓN 1: USUARIOS */}
       {subTab === 'USUARIOS' && (
         <div>
           <form onSubmit={handleGuardarUsuario} style={cardStyle}>
-            <h3>{editUserId ? 'Editar Usuario' : 'Crear Nuevo Usuario'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <h3 style={formTitleStyle}>
+              {editUserId ? <><IconEdit size={16} /> Editar Usuario</> : <><IconPlus size={16} /> Crear Nuevo Usuario</>}
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
               <div>
                 <label style={labelStyle}>Nombre Completo</label>
                 <input type="text" value={uNombre} onChange={(e) => setUNombre(e.target.value)} required style={inputStyle} />
@@ -215,96 +218,97 @@ export function UsuariosABM() {
                 </>
               )}
             </div>
-            <div style={{ marginTop: '16px' }}>
+            <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
               <button type="submit" style={btnPrimary}>{editUserId ? 'Guardar Cambios' : 'Registrar Usuario'}</button>
               {editUserId && <button type="button" onClick={resetUserForm} style={btnSecondary}>Cancelar</button>}
             </div>
           </form>
 
-          <h3>Usuarios Registrados</h3>
-          <table style={tableStyle}>
-            <thead>
-              <tr style={{ background: '#f3f4f6' }}>
-                <th style={tdStyle}>Nombre</th>
-                <th style={tdStyle}>Rol</th>
-                <th style={tdStyle}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios.map((u) => (
-                <tr key={u.id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={tdStyle}>{u.nombre}</td>
-                  <td style={tdStyle}><strong>{u.rol}</strong></td>
-                  <td style={tdStyle}>
-                    <button onClick={() => handleEditUser(u)} style={{ marginRight: '8px', cursor: 'pointer' }}>✏️ Editar</button>
-                    <button onClick={() => handleDeleteUser(u.id)} style={{ cursor: 'pointer', color: 'red' }}>🗑️ Eliminar</button>
-                  </td>
+          <h3 style={sectionHeadingStyle}>Usuarios Registrados</h3>
+          <div style={tableContainerStyle}>
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Nombre</th>
+                  <th style={thStyle}>Rol</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {usuarios.map((u) => (
+                  <tr key={u.id} style={trStyle}>
+                    <td style={{ ...tdStyle, fontWeight: 600, color: '#211c17' }}>{u.nombre}</td>
+                    <td style={tdStyle}><span style={rolChipStyle}>{u.rol}</span></td>
+                    <td style={{ ...tdStyle, textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: '6px' }}>
+                        <button onClick={() => handleEditUser(u)} style={btnAction} title="Editar">
+                          <IconEdit size={15} />
+                        </button>
+                        <button onClick={() => handleDeleteUser(u.id)} style={btnActionDanger} title="Eliminar">
+                          <IconTrash size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* SECCIÓN 2: ROLES Y PERMISOS */}
       {subTab === 'ROLES' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', alignItems: 'start' }}>
+
           {/* Formulario Crear Rol */}
           <div>
             <form onSubmit={handleCrearRol} style={cardStyle}>
-              <h3>➕ Crear Nuevo Rol</h3>
-              <div style={{ marginBottom: '10px' }}>
+              <h3 style={formTitleStyle}><IconPlus size={16} /> Crear Nuevo Rol</h3>
+              <div style={{ marginBottom: '12px' }}>
                 <label style={labelStyle}>Identificador (ID Único)</label>
                 <input type="text" placeholder="EJ: SUPERVISOR" value={rId} onChange={(e) => setRId(e.target.value)} required style={inputStyle} />
               </div>
-              <div style={{ marginBottom: '10px' }}>
+              <div style={{ marginBottom: '12px' }}>
                 <label style={labelStyle}>Nombre del Rol</label>
                 <input type="text" placeholder="Ej: Supervisor de Turnos" value={rNombre} onChange={(e) => setRNombre(e.target.value)} required style={inputStyle} />
               </div>
-              <div style={{ marginBottom: '10px' }}>
+              <div style={{ marginBottom: '12px' }}>
                 <label style={labelStyle}>Descripción</label>
                 <input type="text" value={rDesc} onChange={(e) => setRDesc(e.target.value)} style={inputStyle} />
               </div>
 
               <label style={labelStyle}>Asignar Permisos Iniciales:</label>
-              <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #ddd', padding: '8px', borderRadius: '4px', background: '#fff' }}>
+              <div style={checkListStyle}>
                 {modulos.map((m) => (
-                  <label key={m.id} style={{ display: 'block', fontSize: '13px', marginBottom: '6px' }}>
+                  <label key={m.id} style={checkItemStyle}>
                     <input
                       type="checkbox"
                       checked={rModulosSeleccionados.includes(m.id)}
                       onChange={() => handleToggleModuloNuevoRol(m.id)}
-                    />{' '}
-                    <strong>{m.nombre}</strong> <span style={{ color: '#888' }}>({m.categoria})</span>
+                      style={{ accentColor: '#c2660a' }}
+                    />
+                    <span><strong style={{ color: '#211c17' }}>{m.nombre}</strong> <span style={{ color: '#a89d8a' }}>({m.categoria})</span></span>
                   </label>
                 ))}
               </div>
 
-              <button type="submit" style={{ ...btnPrimary, marginTop: '14px', width: '100%' }}>Guardar Nuevo Rol</button>
+              <button type="submit" style={{ ...btnPrimary, marginTop: '14px', width: '100%', justifyContent: 'center' }}>Guardar Nuevo Rol</button>
             </form>
           </div>
 
           {/* Editor de Permisos por Rol */}
           <div style={cardStyle}>
-            <h3>🛠️ Editar Permisos de Rol</h3>
-            <p style={{ fontSize: '13px', color: '#666' }}>Selecciona un rol para modificar sus accesos:</p>
+            <h3 style={formTitleStyle}><IconShield size={16} /> Editar Permisos de Rol</h3>
+            <p style={{ fontSize: '13px', color: '#8c8172', marginTop: 0 }}>Seleccioná un rol para modificar sus accesos:</p>
 
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '18px' }}>
               {roles.map((r) => (
                 <button
                   key={r.id}
                   type="button"
                   onClick={() => handleSeleccionarRolEdicion(r)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '4px',
-                    border: '1px solid #ccc',
-                    cursor: 'pointer',
-                    background: rolEdicion?.id === r.id ? '#2563eb' : '#fff',
-                    color: rolEdicion?.id === r.id ? '#fff' : '#000',
-                    fontWeight: 'bold'
-                  }}
+                  style={rolEdicion?.id === r.id ? rolPillActive : rolPill}
                 >
                   {r.nombre}
                 </button>
@@ -313,25 +317,28 @@ export function UsuariosABM() {
 
             {rolEdicion ? (
               <div>
-                <h4 style={{ margin: '0 0 10px 0' }}>Permisos para: <span style={{ color: '#2563eb' }}>{rolEdicion.nombre}</span></h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#4a4038' }}>
+                  Permisos para: <span style={{ color: '#9a4508', fontWeight: 700 }}>{rolEdicion.nombre}</span>
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '16px' }}>
                   {modulos.map((m) => (
-                    <label key={m.id} style={{ fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label key={m.id} style={{ fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: '#4a4038' }}>
                       <input
                         type="checkbox"
                         checked={permisosEditando.includes(m.id)}
                         onChange={() => handleTogglePermisoEditando(m.id)}
+                        style={{ accentColor: '#c2660a' }}
                       />
-                      <span><strong>{m.nombre}</strong> <small style={{ color: '#666' }}>[{m.categoria}]</small></span>
+                      <span><strong style={{ color: '#211c17' }}>{m.nombre}</strong> <small style={{ color: '#8c8172' }}>[{m.categoria}]</small></span>
                     </label>
                   ))}
                 </div>
                 <button onClick={handleGuardarPermisosRol} style={btnPrimary}>
-                  💾 Actualizar Permisos de {rolEdicion.id}
+                  <IconSave size={15} /> Actualizar Permisos de {rolEdicion.id}
                 </button>
               </div>
             ) : (
-              <p style={{ color: '#888', fontStyle: 'italic' }}>Haz clic en uno de los roles superiores para editar sus permisos.</p>
+              <p style={{ color: '#a89d8a', fontStyle: 'italic', fontSize: '13px' }}>Hacé clic en uno de los roles superiores para editar sus permisos.</p>
             )}
           </div>
 
@@ -343,10 +350,28 @@ export function UsuariosABM() {
 }
 
 // Estilos
-const cardStyle = { background: '#f9fafb', padding: '16px', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '20px' };
-const labelStyle = { display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px', color: '#374151' };
-const inputStyle = { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' };
-const tableStyle = { width: '100%', borderCollapse: 'collapse', textAlign: 'left', marginTop: '10px' };
-const tdStyle = { padding: '10px', borderBottom: '1px solid #eee' };
-const btnPrimary = { padding: '8px 16px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' };
-const btnSecondary = { padding: '8px 16px', backgroundColor: '#6b7280', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', marginLeft: '8px' };
+const FONT = "'Inter', system-ui, sans-serif";
+const subTabsStyle = { display: 'flex', gap: '6px', marginBottom: '22px', background: '#fffdf9', border: '1px solid #e6ded0', borderRadius: '11px', padding: '6px', width: 'fit-content', boxShadow: '0 1px 2px rgba(16,18,22,0.05)' };
+const subTabStyle = { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 14px', borderRadius: '8px', border: 'none', backgroundColor: 'transparent', color: '#8c8172', fontWeight: 600, fontSize: '13.5px', cursor: 'pointer', fontFamily: FONT };
+const subTabActiveStyle = { ...subTabStyle, backgroundColor: '#211c17', color: '#fffdf9' };
+const cardStyle = { background: '#fffdf9', padding: '20px', borderRadius: '12px', border: '1px solid #e6ded0', marginBottom: '22px', boxShadow: '0 1px 2px rgba(16,18,22,0.05)' };
+const formTitleStyle = { display: 'flex', alignItems: 'center', gap: '8px', marginTop: 0, marginBottom: '16px', color: '#211c17', fontSize: '15px', fontWeight: 700 };
+const sectionHeadingStyle = { fontSize: '15px', fontWeight: 700, color: '#211c17', margin: '0 0 12px' };
+const labelStyle = { display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '5px', color: '#4a4038' };
+const inputStyle = { width: '100%', padding: '9px 11px', borderRadius: '9px', border: '1px solid #e6ded0', boxSizing: 'border-box', fontSize: '14px', fontFamily: FONT, color: '#211c17', backgroundColor: '#fffdf9', outline: 'none' };
+const tableContainerStyle = { backgroundColor: '#fffdf9', border: '1px solid #e6ded0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(16,18,22,0.05)' };
+const tableStyle = { width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' };
+const thStyle = { padding: '12px 16px', backgroundColor: '#f5f0e6', color: '#8c8172', fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e6ded0' };
+const trStyle = { borderBottom: '1px solid #f1ebe0' };
+const tdStyle = { padding: '13px 16px', color: '#4a4038' };
+const rolChipStyle = { display: 'inline-block', padding: '3px 10px', borderRadius: '4px', backgroundColor: '#f1ebe0', color: '#4a4038', fontSize: '12px', fontWeight: 700 };
+const checkListStyle = { maxHeight: '210px', overflowY: 'auto', border: '1px solid #e6ded0', padding: '10px', borderRadius: '9px', background: '#faf2e2' };
+const checkItemStyle = { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', marginBottom: '8px', cursor: 'pointer', color: '#4a4038' };
+const btnPrimary = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', backgroundColor: '#211c17', color: '#fffdf9', border: 'none', borderRadius: '9px', cursor: 'pointer', fontWeight: 700, fontFamily: FONT, fontSize: '14px' };
+const btnSecondary = { padding: '10px 16px', backgroundColor: '#fffdf9', color: '#4a4038', border: '1px solid #e6ded0', borderRadius: '9px', cursor: 'pointer', fontWeight: 600, fontFamily: FONT, fontSize: '14px' };
+const btnAction = { display: 'inline-grid', placeItems: 'center', width: '32px', height: '32px', backgroundColor: '#f1ebe0', border: '1px solid #e6ded0', borderRadius: '8px', cursor: 'pointer', color: '#4a4038' };
+const btnActionDanger = { display: 'inline-grid', placeItems: 'center', width: '32px', height: '32px', backgroundColor: '#f3e0da', border: '1px solid #e6c4b8', borderRadius: '8px', cursor: 'pointer', color: '#9c2b1f' };
+const rolPill = { padding: '7px 13px', borderRadius: '9px', border: '1px solid #e6ded0', cursor: 'pointer', background: '#fffdf9', color: '#4a4038', fontWeight: 600, fontSize: '13px', fontFamily: FONT };
+const rolPillActive = { ...rolPill, background: '#211c17', color: '#fffdf9', borderColor: '#211c17' };
+const alertSuccessStyle = { display: 'flex', alignItems: 'center', gap: '9px', padding: '11px 16px', backgroundColor: '#e9ecdd', color: '#3f6b1f', border: '1px solid #d2d9c0', borderRadius: '10px', marginBottom: '16px', fontSize: '13.5px', fontWeight: 600 };
+const alertErrorStyle = { display: 'flex', alignItems: 'center', gap: '9px', padding: '11px 16px', backgroundColor: '#f3e0da', color: '#9c2b1f', border: '1px solid #e6c4b8', borderRadius: '10px', marginBottom: '16px', fontSize: '13.5px', fontWeight: 500 };
