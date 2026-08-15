@@ -9,6 +9,13 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
+/*{
+  origin: [
+    'http://localhost:5173',
+    'https://tu-deposito.vercel.app' // 👈 Poner la URL generada por Vercel
+  ],
+  credentials: true
+}));*/
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
